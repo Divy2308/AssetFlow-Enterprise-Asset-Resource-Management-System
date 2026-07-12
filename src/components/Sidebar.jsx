@@ -24,7 +24,7 @@ const menuItems = [
   { id: 'notifications', label: 'Notifications', Icon: BellIcon }
 ];
 
-export default function Sidebar({ activeTab, onTabChange, unreadCount = 0 }) {
+export default function Sidebar({ activeTab, onTabChange, unreadCount = 0, userRole = 'EMPLOYEE' }) {
   return (
     <aside className="w-64 bg-white border-r border-border-color flex flex-col justify-between p-6 shrink-0 h-screen sticky top-0">
       <div>
@@ -39,7 +39,12 @@ export default function Sidebar({ activeTab, onTabChange, unreadCount = 0 }) {
         {/* Navigation Items */}
         <nav>
           <ul className="flex flex-col gap-1 p-0 m-0 list-none">
-            {menuItems.map((item) => {
+            {menuItems
+              .filter((item) => {
+                if (item.id === 'org-setup' && userRole !== 'ADMIN') return false;
+                return true;
+              })
+              .map((item) => {
               const isInterfaceActive = activeTab === item.id;
               return (
                 <li key={item.id}>

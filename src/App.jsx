@@ -34,29 +34,71 @@ const TAB_LABELS = {
 };
 
 function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [session, setSession] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
   const [activeTab, setActiveTab] = useState('dashboard');
 
   const [notifications, setNotifications] = useState([]);
   const [assets, setAssets] = useState([]);
-  const [employeesList, setEmployeesList] = useState([]);
 
+  // 1. Listen for Supabase Auth state changes
   useEffect(() => {
-    if (!isLoggedIn) return;
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
 
-    // 1. Fetch Employees list
-    const fetchEmployees = async () => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // 2. Fetch logged-in user profile from employees table
+  useEffect(() => {
+    if (!session) {
+      setCurrentUser(null);
+      return;
+    }
+
+    const fetchProfile = async () => {
       try {
-        const { data, error } = await supabase.from('employees').select('*');
+        const { data, error } = await supabase
+          .from('employees')
+          .select('*, departments(name)')
+          .eq('email', session.user.email)
+          .single();
+
         if (!error && data) {
-          setEmployeesList(data.map(e => ({ id: e.id, name: e.name, dept: e.department })));
+          setCurrentUser({
+            id: data.id,
+            name: data.name,
+            email: data.email,
+            role: data.role,
+            department: data.departments?.name || '—'
+          });
+        } else {
+          // Fallback profile if user profile is missing in the database table
+          setCurrentUser({
+            id: 999,
+            name: session.user.email.split('@')[0],
+            email: session.user.email,
+            role: 'EMPLOYEE',
+            department: '—'
+          });
         }
       } catch (err) {
-        console.error('Error loading employees:', err);
+        console.error('Error fetching employee profile:', err);
       }
     };
+    fetchProfile();
+  }, [session]);
 
-    // 2. Fetch Assets directory
+  // 3. Load global data on mounting/active session
+  useEffect(() => {
+    if (!session) return;
+
+    // Load assets
     const fetchAssets = async () => {
       try {
         const { data, error } = await supabase.from('assets').select('*, employees(name)');
@@ -77,7 +119,7 @@ function App() {
       }
     };
 
-    // 3. Fetch Activity Notifications
+    // Load notifications
     const fetchNotifications = async () => {
       try {
         const { data, error } = await supabase.from('notifications').select('*').order('id', { ascending: false });
@@ -99,23 +141,27 @@ function App() {
       }
     };
 
-    fetchEmployees();
     fetchAssets();
     fetchNotifications();
-  }, [isLoggedIn]);
+  }, [session]);
 
   const unreadCount = notifications.filter(n => n.isUnread).length;
 
   const currentTitle = TAB_LABELS[activeTab] || 'AssetFlow';
 
-  if (!isLoggedIn) {
-    return <LoginPage onLogin={() => setIsLoggedIn(true)} />;
+  if (!session) {
+    return <LoginPage onLogin={() => {}} />;
   }
 
   return (
     <div className="flex bg-bg-gray min-h-screen">
       {/* Left Sidebar */}
-      <Sidebar activeTab={activeTab} onTabChange={setActiveTab} unreadCount={unreadCount} />
+      <Sidebar 
+        activeTab={activeTab} 
+        onTabChange={setActiveTab} 
+        unreadCount={unreadCount} 
+        userRole={currentUser ? currentUser.role : 'EMPLOYEE'}
+      />
 
       {/* Right Scrollable Content Frame */}
       <main className="flex-grow overflow-y-auto p-8 flex flex-col justify-between">
@@ -124,7 +170,10 @@ function App() {
           title={currentTitle} 
           unreadCount={unreadCount} 
           onNotificationClick={() => setActiveTab('notifications')} 
-          onLogout={() => setIsLoggedIn(false)}
+          onLogout={async () => {
+            await supabase.auth.signOut();
+          }}
+          userName={currentUser ? currentUser.name : 'User'}
         />
 
         {/* Dynamic Inner Page Component */}
@@ -132,11 +181,18 @@ function App() {
           {activeTab === 'dashboard' ? (
             <DashboardPage />
           ) : activeTab === 'org-setup' ? (
-            <OrgSetupPage />
+            currentUser?.role === 'ADMIN' ? (
+              <OrgSetupPage />
+            ) : (
+              <div className="text-center font-bold text-alert-red-text p-10 bg-white border border-border-color rounded-2xl max-w-lg mx-auto mt-10 shadow-sm flex flex-col items-center gap-4">
+                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-alert-red-text"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                <span>Access Denied: Admin privileges required to manage organization setup.</span>
+              </div>
+            )
           ) : activeTab === 'assets' ? (
             <AssetsPage assets={assets} setAssets={setAssets} />
           ) : activeTab === 'allocation' ? (
-            <AllocationPage assets={assets} setAssets={setAssets} employeesList={employeesList} />
+            <AllocationPage assets={assets} setAssets={setAssets} />
           ) : activeTab === 'booking' ? (
             <BookingPage />
           ) : activeTab === 'maintenance' ? (
