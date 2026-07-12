@@ -1,7 +1,7 @@
 import React from 'react';
 import { BellIcon, ChevronDownIcon } from './Icons';
 
-export default function Header({ title = 'Screen 2', unreadCount = 3, userName = 'Aritra', onNotificationClick }) {
+export default function Header({ title = 'Screen 2', unreadCount = 3, userName = 'Aritra', onNotificationClick, onLogout }) {
   return (
     <header className="flex justify-between items-center mb-6 pb-4 border-b border-border-color">
       {/* Title */}
@@ -31,7 +31,15 @@ export default function Header({ title = 'Screen 2', unreadCount = 3, userName =
         </button>
 
         {/* User Profile Dropdown */}
-        <div className="flex items-center gap-2 bg-white border border-border-color py-1.5 pl-2 pr-3.5 rounded-xl cursor-pointer hover:bg-bg-gray transition-all duration-200">
+        <div 
+          onClick={() => {
+            if (confirm('Are you sure you want to log out?')) {
+              onLogout();
+            }
+          }}
+          title="Log Out"
+          className="flex items-center gap-2 bg-white border border-border-color py-1.5 pl-2 pr-3.5 rounded-xl cursor-pointer hover:bg-bg-gray transition-all duration-200"
+        >
           <div className="w-7 h-7 rounded-lg bg-primary-orange text-white flex items-center justify-center font-extrabold text-xs">
             {userName.charAt(0)}
           </div>

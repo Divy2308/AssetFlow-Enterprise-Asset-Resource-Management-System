@@ -11,6 +11,7 @@ import MaintenancePage from './pages/MaintenancePage';
 import AuditPage from './pages/AuditPage';
 import ReportsPage from './pages/ReportsPage';
 import NotificationsPage from './pages/NotificationsPage';
+import LoginPage from './pages/LoginPage';
 
 // List of tabs and their titles for dynamic header updates
 const TAB_LABELS = {
@@ -26,6 +27,7 @@ const TAB_LABELS = {
 };
 
 function App() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [activeTab, setActiveTab] = useState('dashboard');
 
   const [notifications, setNotifications] = useState([
@@ -60,6 +62,10 @@ function App() {
 
   const currentTitle = TAB_LABELS[activeTab] || 'AssetFlow';
 
+  if (!isLoggedIn) {
+    return <LoginPage onLogin={() => setIsLoggedIn(true)} />;
+  }
+
   return (
     <div className="flex bg-bg-gray min-h-screen">
       {/* Left Sidebar */}
@@ -68,7 +74,12 @@ function App() {
       {/* Right Scrollable Content Frame */}
       <main className="flex-grow overflow-y-auto p-8 flex flex-col justify-between">
         {/* Top Header */}
-        <Header title={currentTitle} unreadCount={unreadCount} onNotificationClick={() => setActiveTab('notifications')} />
+        <Header 
+          title={currentTitle} 
+          unreadCount={unreadCount} 
+          onNotificationClick={() => setActiveTab('notifications')} 
+          onLogout={() => setIsLoggedIn(false)}
+        />
 
         {/* Dynamic Inner Page Component */}
         <div className="flex-grow mt-2">
