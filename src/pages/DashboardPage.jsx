@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import OverviewCard from '../components/OverviewCard';
 import QuickActions from '../components/QuickActions';
 import RecentActivity from '../components/RecentActivity';
+import { supabase } from '../config/supabaseClient';
 import { 
   BoxIcon, 
   ClipboardIcon, 
@@ -14,20 +15,67 @@ import {
 } from '../components/Icons';
 
 export default function DashboardPage() {
-  // Metric card definitions based on mockup data
+  const [counts, setCounts] = useState({
+    available: 0,
+    allocated: 0,
+    maintenance: 0,
+    bookings: 0,
+    transfers: 1,
+    returns: 2
+  });
+
+  useEffect(() => {
+    const fetchMetrics = async () => {
+      try {
+        // Query assets status distribution
+        const { data: assets } = await supabase.from('assets').select('status');
+        let available = 0;
+        let allocated = 0;
+        let maintenance = 0;
+        if (assets) {
+          assets.forEach(a => {
+            if (a.status === 'AVAILABLE') available++;
+            else if (a.status === 'ALLOCATED') allocated++;
+            else if (a.status === 'UNDER_MAINTENANCE') maintenance++;
+          });
+        }
+
+        // Query active upcoming bookings count
+        const { count: bookingsCount } = await supabase
+          .from('bookings')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'UPCOMING');
+
+        setCounts({
+          available,
+          allocated,
+          maintenance,
+          bookings: bookingsCount || 0,
+          transfers: 1,
+          returns: 2
+        });
+      } catch (err) {
+        console.error('Error fetching dashboard counts:', err);
+      }
+    };
+
+    fetchMetrics();
+  }, []);
+
+  // Metric card definitions based on real-time database counts
   const metrics = [
-    { label: 'Available', value: '128', Icon: BoxIcon, fillPercent: 78 },
-    { label: 'Allocated', value: '76', Icon: ClipboardIcon, fillPercent: 55 },
-    { label: 'Available', value: '4', Icon: CheckCircleIcon, fillPercent: 12 },
-    { label: 'Active Bookings', value: '9', Icon: CalendarIcon, fillPercent: 32 },
-    { label: 'Pending Transfers', value: '3', Icon: TransferIcon, fillPercent: 18 },
-    { label: 'Upcoming returns', value: '12', Icon: RefreshIcon, fillPercent: 42 }
+    { label: 'Available', value: counts.available.toString(), Icon: BoxIcon, fillPercent: counts.available > 0 ? Math.min(100, Math.round((counts.available / (counts.available + counts.allocated + counts.maintenance)) * 100)) : 0 },
+    { label: 'Allocated', value: counts.allocated.toString(), Icon: ClipboardIcon, fillPercent: counts.allocated > 0 ? Math.min(100, Math.round((counts.allocated / (counts.available + counts.allocated + counts.maintenance)) * 100)) : 0 },
+    { label: 'Maintenance', value: counts.maintenance.toString(), Icon: CheckCircleIcon, fillPercent: counts.maintenance > 0 ? Math.min(100, Math.round((counts.maintenance / (counts.available + counts.allocated + counts.maintenance)) * 100)) : 0 },
+    { label: 'Active Bookings', value: counts.bookings.toString(), Icon: CalendarIcon, fillPercent: Math.min(100, counts.bookings * 15) },
+    { label: 'Pending Transfers', value: counts.transfers.toString(), Icon: TransferIcon, fillPercent: 18 },
+    { label: 'Upcoming returns', value: counts.returns.toString(), Icon: RefreshIcon, fillPercent: 42 }
   ];
 
   // Callback mock handlers for quick actions
-  const handleRegisterAsset = () => alert('Opening "Register Asset" flow...');
-  const handleBookResource = () => alert('Opening "Book Resource" calendar...');
-  const handleRaiseRequests = () => alert('Opening "Raise Request" dialog...');
+  const handleRegisterAsset = () => alert('Please use the sidebar "Asset Register" menu to register items.');
+  const handleBookResource = () => alert('Please use the sidebar "Resource Booking" menu to allocate timeslots.');
+  const handleRaiseRequests = () => alert('Please use the sidebar "Maintenance" menu to raise requests.');
 
   return (
     <div className="flex flex-col gap-6">

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { supabase } from '../config/supabaseClient';
 import {
   UserIcon,
   SendIcon,
@@ -49,48 +50,82 @@ export default function AllocationPage({ assets, setAssets, employeesList }) {
   const SelectedIcon = selectedAsset ? getAssetIcon(selectedAsset.type) : BoxIcon;
 
   // Handle Form Submit
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!selectedAsset) return alert('No asset selected.');
     if (!targetEmployee) return alert('Please select a recipient employee.');
     if (!reason.trim()) return alert('Please enter a transfer reason.');
 
+    const emp = employeesList.find((e) => e.name === targetEmployee);
+    const targetOwnerId = emp ? emp.id : null;
+    const targetLocation = emp?.dept === 'Engineering' ? 'Bengaluru' : 'HQ Floor 2';
+
     const today = new Date();
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const formattedDate = `${months[today.getMonth()]} ${String(today.getDate()).padStart(2, '0')}`;
 
-    // Update the state of assets in global state
-    setAssets(
-      assets.map((a) => {
-        if (a.id.toString() === selectedAssetId) {
-          return {
-            ...a,
-            status: 'Allocated',
-            owner: targetEmployee,
-            location: employeesList.find(e => e.name === targetEmployee)?.dept === 'Engineering' ? 'Bengaluru' : 'HQ Floor 2'
-          };
-        }
-        return a;
-      })
-    );
-
-    // Prepend to history logs state
     const actionText = isAllocated 
       ? `Transferred from ${currentOwner} to ${targetEmployee}`
       : `Allocated to ${targetEmployee}`;
 
-    const newLog = {
-      id: Date.now(),
-      date: formattedDate,
-      details: `${actionText} - reason: ${reason}`
-    };
+    try {
+      // 1. Update status and owner in Supabase
+      const { error: assetError } = await supabase
+        .from('assets')
+        .update({
+          status: 'ALLOCATED',
+          owner_id: targetOwnerId,
+          location: targetLocation
+        })
+        .eq('id', selectedAsset.id);
 
-    setHistoryLogs([newLog, ...historyLogs]);
-    alert(`Success! Asset ${selectedAsset.tag} has been updated in the directory.`);
-    
-    // Clear form inputs
-    setReason('');
-    setTargetEmployee('');
+      if (assetError) {
+        return alert('Failed to allocate asset in database: ' + assetError.message);
+      }
+
+      // 2. Insert into allocation history logs in Supabase
+      await supabase
+        .from('allocation_history')
+        .insert([
+          {
+            asset_id: selectedAsset.id,
+            details: `${actionText} - reason: ${reason}`
+          }
+        ]);
+
+      // 3. Update local state
+      setAssets(
+        assets.map((a) => {
+          if (a.id === selectedAsset.id) {
+            return {
+              ...a,
+              status: 'Allocated',
+              owner: targetEmployee,
+              location: targetLocation
+            };
+          }
+          return a;
+        })
+      );
+
+      // Prepend to history logs state locally
+      const newLog = {
+        id: Date.now(),
+        date: formattedDate,
+        details: `${actionText} - reason: ${reason}`
+      };
+      setHistoryLogs([newLog, ...historyLogs]);
+
+      alert(`Success! Asset ${selectedAsset.tag} has been updated in the directory.`);
+      
+      // Clear form inputs
+      setReason('');
+      setTargetEmployee('');
+
+    } catch (err) {
+      console.error('Error during allocation transaction:', err);
+      alert('An unexpected error occurred during database write.');
+    }
   };
 
   return (

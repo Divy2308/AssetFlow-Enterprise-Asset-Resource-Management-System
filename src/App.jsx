@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import DashboardPage from './pages/DashboardPage';
@@ -12,6 +12,7 @@ import AuditPage from './pages/AuditPage';
 import ReportsPage from './pages/ReportsPage';
 import NotificationsPage from './pages/NotificationsPage';
 import LoginPage from './pages/LoginPage';
+import { supabase } from './config/supabaseClient';
 
 // List of tabs and their titles for dynamic header updates
 const TAB_LABELS = {
@@ -30,35 +31,74 @@ function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [activeTab, setActiveTab] = useState('dashboard');
 
-  const [notifications, setNotifications] = useState([
-    { id: 1, tag: 'AF-0014', category: 'approvals', text: 'Laptop AF-0014 assigned to Priya Shah', time: '2m ago', isUnread: true, type: 'laptop', dotColor: 'orange', bgColor: 'orange' },
-    { id: 2, tag: 'AF-0055', category: 'approvals', text: 'Maintenance request AF-0055 approved', time: '18m ago', isUnread: true, type: 'wrench', dotColor: 'green', bgColor: 'green' },
-    { id: 3, tag: 'Room B2', category: 'bookings', text: 'Booking confirmed : Room B2 : 2:00 to 3:00 PM', subtext: 'Room B2 • 2:00 PM – 3:00 PM', time: '1h ago', isUnread: true, type: 'calendar', dotColor: 'blue', bgColor: 'blue' },
-    { id: 4, tag: 'AF-0033', category: 'transfers', text: 'Transfer approved : AF-0033 to facilities dept', time: '3h ago', isUnread: false, type: 'transfer', dotColor: 'purple', bgColor: 'purple' },
-    { id: 5, tag: 'AF-0021', category: 'alerts', text: 'Overdue return : AF-0021 was due 3 days ago', time: '1d ago', isUnread: false, type: 'clock', dotColor: 'yellow', bgColor: 'yellow' },
-    { id: 6, tag: 'AF-0088', category: 'alerts', text: 'Audit discrepancy flagged : AF-0088 damaged', time: '2d ago', isUnread: false, type: 'shield', dotColor: 'red', bgColor: 'red' }
-  ]);
+  const [notifications, setNotifications] = useState([]);
+  const [assets, setAssets] = useState([]);
+  const [employeesList, setEmployeesList] = useState([]);
+
+  useEffect(() => {
+    if (!isLoggedIn) return;
+
+    // 1. Fetch Employees list
+    const fetchEmployees = async () => {
+      try {
+        const { data, error } = await supabase.from('employees').select('*');
+        if (!error && data) {
+          setEmployeesList(data.map(e => ({ id: e.id, name: e.name, dept: e.department })));
+        }
+      } catch (err) {
+        console.error('Error loading employees:', err);
+      }
+    };
+
+    // 2. Fetch Assets directory
+    const fetchAssets = async () => {
+      try {
+        const { data, error } = await supabase.from('assets').select('*, employees(name)');
+        if (!error && data) {
+          setAssets(data.map(a => ({
+            id: a.id,
+            tag: a.tag,
+            name: a.name,
+            category: a.category_name,
+            status: a.status === 'AVAILABLE' ? 'Available' : a.status === 'ALLOCATED' ? 'Allocated' : 'Maintenance',
+            location: a.location,
+            type: a.type || 'other',
+            owner: a.employees?.name || '—'
+          })));
+        }
+      } catch (err) {
+        console.error('Error loading assets:', err);
+      }
+    };
+
+    // 3. Fetch Activity Notifications
+    const fetchNotifications = async () => {
+      try {
+        const { data, error } = await supabase.from('notifications').select('*').order('id', { ascending: false });
+        if (!error && data) {
+          setNotifications(data.map(n => ({
+            id: n.id,
+            tag: n.tag,
+            category: n.category,
+            text: n.text,
+            time: n.time_label,
+            isUnread: n.is_unread,
+            type: n.type,
+            dotColor: n.dot_color,
+            bgColor: n.bg_color
+          })));
+        }
+      } catch (err) {
+        console.error('Error loading notifications:', err);
+      }
+    };
+
+    fetchEmployees();
+    fetchAssets();
+    fetchNotifications();
+  }, [isLoggedIn]);
 
   const unreadCount = notifications.filter(n => n.isUnread).length;
-
-  const [assets, setAssets] = useState([
-    { id: 1, tag: 'AF-0012', name: 'Dell Laptop', category: 'Electronics', status: 'Allocated', location: 'Bengaluru', type: 'laptop', owner: 'Priya' },
-    { id: 2, tag: 'AF-0062', name: 'Projector', category: 'Electronics', status: 'Maintenance', location: 'HQ Floor 2', type: 'projector', owner: '—' },
-    { id: 3, tag: 'AF-0201', name: 'Office Chair', category: 'Furniture', status: 'Available', location: 'Warehouse', type: 'chair', owner: '—' },
-    { id: 4, tag: 'AF-0114', name: 'Dell laptop', category: 'Electronics', status: 'Allocated', location: 'Bengaluru', type: 'laptop', owner: 'Priya Shah' }
-  ]);
-
-  const employeesList = [
-    { name: 'Priya Shah', dept: 'Engineering' },
-    { name: 'aditi rao', dept: 'Engineering' },
-    { name: 'rohan mehta', dept: 'Facilities' },
-    { name: 'sana iqbal', dept: 'Human Resources (HR)' },
-    { name: 'Manya Anand', dept: 'Facilities' },
-    { name: 'Elroy M', dept: 'Engineering' },
-    { name: 'Chintan Varma', dept: 'Human Resources (HR)' },
-    { name: 'Minty Fish', dept: 'Human Resources (HR)' },
-    { name: 'Cool Emu', dept: 'Facilities' }
-  ];
 
   const currentTitle = TAB_LABELS[activeTab] || 'AssetFlow';
 

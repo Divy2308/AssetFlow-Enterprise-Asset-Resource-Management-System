@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { supabase } from '../config/supabaseClient';
 import {
   OrgSetupIcon,
   TagIcon,
@@ -32,107 +33,179 @@ export default function OrgSetupPage() {
   // ----------------------------------------------------
   // States & Form Handlers for DEPARTMENTS
   // ----------------------------------------------------
-  const [departments, setDepartments] = useState([
-    { id: 1, name: 'Engineering', head: 'aditi rao', parent: '—', status: 'Active', type: 'eng' },
-    { id: 2, name: 'Facilities', head: 'rohan mehta', parent: '—', status: 'Active', type: 'fac' },
-    { id: 3, name: 'Human Resources (HR)', head: 'sana iqbal', parent: 'Field Ops', status: 'Inactive', type: 'hr' }
-  ]);
+  const [departments, setDepartments] = useState([]);
   const [deptForm, setDeptForm] = useState({ name: '', head: '', parent: '—', status: 'Active' });
 
   // ----------------------------------------------------
   // States & Form Handlers for CATEGORIES
   // ----------------------------------------------------
-  const [categories, setCategories] = useState([
-    { id: 1, name: 'IT Equipment', prefix: 'IT-EQ', desc: 'Laptops, Monitors, Keyboards, etc.', status: 'Active' },
-    { id: 2, name: 'Office Furniture', prefix: 'OFF-FN', desc: 'Chairs, Desks, Storage units', status: 'Active' },
-    { id: 3, name: 'Audio/Visual', prefix: 'AV-SYS', desc: 'Projectors, Microphones, Speakers', status: 'Active' }
-  ]);
+  const [categories, setCategories] = useState([]);
   const [catForm, setCatForm] = useState({ name: '', prefix: '', desc: '', status: 'Active' });
 
   // ----------------------------------------------------
   // States & Form Handlers for EMPLOYEES
   // ----------------------------------------------------
-  const [employees, setEmployees] = useState([
-    { id: 1, name: 'Priya', dept: 'Engineering', head: 'aditi rao', status: 'Active' },
-    { id: 2, name: 'Manya Anand', dept: 'Facilities', head: 'rohan mehta', status: 'Active' },
-    { id: 3, name: 'Elroy M', dept: 'Engineering', head: 'aditi rao', status: 'Active' },
-    { id: 4, name: 'Chintan Varma', dept: 'Human Resources (HR)', head: 'sana iqbal', status: 'Active' }
-  ]);
+  const [employees, setEmployees] = useState([]);
   const [empForm, setEmpForm] = useState({ name: '', dept: 'Engineering', head: '', status: 'Active' });
 
+  // 1. Fetch departments, categories, and employees from Supabase on mount
+  useEffect(() => {
+    const loadOrgSetupData = async () => {
+      try {
+        // Load departments
+        const { data: depts } = await supabase.from('departments').select('*');
+        if (depts) {
+          setDepartments(depts.map(d => ({
+            id: d.id,
+            name: d.name,
+            head: d.head_id ? `Employee #${d.head_id}` : '—',
+            parent: d.parent_department_id ? `Dept #${d.parent_department_id}` : '—',
+            status: d.status,
+            type: d.name.toLowerCase().includes('eng') ? 'eng' : d.name.toLowerCase().includes('fac') ? 'fac' : 'hr'
+          })));
+        }
+
+        // Load categories
+        const { data: cats } = await supabase.from('asset_categories').select('*');
+        if (cats) {
+          setCategories(cats.map(c => ({
+            id: c.id,
+            name: c.name,
+            prefix: c.name.substring(0, 3).toUpperCase(),
+            desc: c.custom_fields ? JSON.stringify(c.custom_fields) : '—',
+            status: 'Active'
+          })));
+        }
+
+        // Load employees
+        const { data: emps } = await supabase.from('employees').select('*');
+        if (emps) {
+          setEmployees(emps.map(e => ({
+            id: e.id,
+            name: e.name,
+            dept: e.department_id ? `Dept #${e.department_id}` : '—',
+            head: '—',
+            status: e.status
+          })));
+        }
+      } catch (err) {
+        console.error('Failed to load org data:', err);
+      }
+    };
+    loadOrgSetupData();
+  }, []);
+
   // Handle adding records dynamically depending on sub-tab
-  const handleFormSubmit = (e) => {
+  const handleFormSubmit = async (e) => {
     e.preventDefault();
     if (activeSubTab === 'departments') {
       if (!deptForm.name || !deptForm.head) return alert('Please fill in Name and Department Head');
-      setDepartments([
-        ...departments,
-        {
-          id: Date.now(),
-          name: deptForm.name,
-          head: deptForm.head.toLowerCase(),
-          parent: deptForm.parent,
-          status: deptForm.status,
-          type: deptForm.name.toLowerCase().includes('eng') ? 'eng' : deptForm.name.toLowerCase().includes('fac') ? 'fac' : 'hr'
-        }
-      ]);
-      setDeptForm({ name: '', head: '', parent: '—', status: 'Active' });
+      const { data, error } = await supabase
+        .from('departments')
+        .insert([{ name: deptForm.name, status: deptForm.status }])
+        .select();
+
+      if (error) {
+        alert('Error creating department: ' + error.message);
+      } else if (data && data[0]) {
+        setDepartments([
+          ...departments,
+          {
+            id: data[0].id,
+            name: data[0].name,
+            head: deptForm.head.toLowerCase(),
+            parent: deptForm.parent,
+            status: data[0].status,
+            type: data[0].name.toLowerCase().includes('eng') ? 'eng' : data[0].name.toLowerCase().includes('fac') ? 'fac' : 'hr'
+          }
+        ]);
+        setDeptForm({ name: '', head: '', parent: '—', status: 'Active' });
+      }
     } else if (activeSubTab === 'categories') {
       if (!catForm.name || !catForm.prefix) return alert('Please fill in Name and Code Prefix');
-      setCategories([
-        ...categories,
-        {
-          id: Date.now(),
-          name: catForm.name,
-          prefix: catForm.prefix.toUpperCase(),
-          desc: catForm.desc || '—',
-          status: catForm.status
-        }
-      ]);
-      setCatForm({ name: '', prefix: '', desc: '', status: 'Active' });
+      const { data, error } = await supabase
+        .from('asset_categories')
+        .insert([{ name: catForm.name, custom_fields: { description: catForm.desc } }])
+        .select();
+
+      if (error) {
+        alert('Error creating category: ' + error.message);
+      } else if (data && data[0]) {
+        setCategories([
+          ...categories,
+          {
+            id: data[0].id,
+            name: data[0].name,
+            prefix: catForm.prefix.toUpperCase(),
+            desc: catForm.desc || '—',
+            status: 'Active'
+          }
+        ]);
+        setCatForm({ name: '', prefix: '', desc: '', status: 'Active' });
+      }
     } else if (activeSubTab === 'employees') {
       if (!empForm.name || !empForm.head) return alert('Please fill in Name and Manager/Head Name');
-      setEmployees([
-        ...employees,
-        {
-          id: Date.now(),
-          name: empForm.name,
-          dept: empForm.dept,
-          head: empForm.head.toLowerCase(),
-          status: empForm.status
-        }
-      ]);
-      setEmpForm({ name: '', dept: 'Engineering', head: '', status: 'Active' });
+      
+      const email = `${empForm.name.toLowerCase().replace(/\s+/g, '')}@company.com`;
+      const { data, error } = await supabase
+        .from('employees')
+        .insert([{ name: empForm.name, email, role: 'EMPLOYEE', password_hash: 'default' }])
+        .select();
+
+      if (error) {
+        alert('Error creating employee: ' + error.message);
+      } else if (data && data[0]) {
+        setEmployees([
+          ...employees,
+          {
+            id: data[0].id,
+            name: data[0].name,
+            dept: empForm.dept,
+            head: empForm.head.toLowerCase(),
+            status: data[0].status
+          }
+        ]);
+        setEmpForm({ name: '', dept: 'Engineering', head: '', status: 'Active' });
+      }
     }
     setShowAddModal(false);
   };
 
   // Row-level actions helpers
-  const handleToggleStatus = (id) => {
+  const handleToggleStatus = async (id) => {
     if (activeSubTab === 'departments') {
-      setDepartments(
-        departments.map((d) => (d.id === id ? { ...d, status: d.status === 'Active' ? 'Inactive' : 'Active' } : d))
-      );
+      const dept = departments.find(d => d.id === id);
+      if (!dept) return;
+      const nextStatus = dept.status === 'Active' ? 'Inactive' : 'Active';
+      const { error } = await supabase.from('departments').update({ status: nextStatus }).eq('id', id);
+      if (!error) {
+        setDepartments(departments.map((d) => (d.id === id ? { ...d, status: nextStatus } : d)));
+      }
     } else if (activeSubTab === 'categories') {
-      setCategories(
-        categories.map((c) => (c.id === id ? { ...c, status: c.status === 'Active' ? 'Inactive' : 'Active' } : c))
-      );
+      setCategories(categories.map((c) => (c.id === id ? { ...c, status: c.status === 'Active' ? 'Inactive' : 'Active' } : c)));
     } else if (activeSubTab === 'employees') {
-      setEmployees(
-        employees.map((e) => (e.id === id ? { ...e, status: e.status === 'Active' ? 'Inactive' : 'Active' } : e))
-      );
+      const emp = employees.find(e => e.id === id);
+      if (!emp) return;
+      const nextStatus = emp.status === 'Active' ? 'Inactive' : 'Active';
+      const { error } = await supabase.from('employees').update({ status: nextStatus }).eq('id', id);
+      if (!error) {
+        setEmployees(employees.map((e) => (e.id === id ? { ...e, status: nextStatus } : e)));
+      }
     }
     setActiveDropdownRow(null);
   };
 
-  const handleDeleteItem = (id) => {
+  const handleDeleteItem = async (id) => {
     if (confirm('Are you sure you want to delete this item?')) {
       if (activeSubTab === 'departments') {
-        setDepartments(departments.filter((d) => d.id !== id));
+        const { error } = await supabase.from('departments').delete().eq('id', id);
+        if (!error) setDepartments(departments.filter((d) => d.id !== id));
       } else if (activeSubTab === 'categories') {
-        setCategories(categories.filter((c) => c.id !== id));
+        const { error } = await supabase.from('asset_categories').delete().eq('id', id);
+        if (!error) setCategories(categories.filter((c) => c.id !== id));
       } else if (activeSubTab === 'employees') {
-        setEmployees(employees.filter((e) => e.id !== id));
+        const { error } = await supabase.from('employees').delete().eq('id', id);
+        if (!error) setEmployees(employees.filter((e) => e.id !== id));
       }
     }
     setActiveDropdownRow(null);
