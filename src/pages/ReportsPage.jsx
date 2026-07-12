@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { supabase } from '../config/supabaseClient';
 import {
   CalendarIcon,
   InfoIcon,
@@ -11,6 +12,7 @@ import {
   ChevronDownIcon
 } from '../components/Icons';
 
+
 export default function ReportsPage() {
   // 1. Date Period Filter State
   const [dateRange, setDateRange] = useState('1 - 15 Jul 2026');
@@ -18,39 +20,190 @@ export default function ReportsPage() {
   // 2. Export Simulation Loader State
   const [exporting, setExporting] = useState(false);
 
-  // 3. Dynamic Datasets based on Date Period
-  const datasets = {
-    '1 - 15 Jul 2026': {
-      bookingsCount: 152,
-      trend: '↑ 12% vs last month',
-      departments: [
-        { name: 'Engineering', value: 78 },
-        { name: 'IT', value: 62 },
-        { name: 'HR', value: 48 },
-        { name: 'Operations', value: 71 },
-        { name: 'Admin', value: 56 },
-        { name: 'Finance', value: 43 }
-      ],
-      maintenanceLine: [10, 15, 22, 18, 26, 32, 34, 38],
-      lineDates: ['1 Jul', '3 Jul', '5 Jul', '7 Jul', '9 Jul', '11 Jul', '13 Jul', '15 Jul']
-    },
-    '16 - 30 Jul 2026': {
-      bookingsCount: 184,
-      trend: '↑ 18% vs last month',
-      departments: [
-        { name: 'Engineering', value: 82 },
-        { name: 'IT', value: 68 },
-        { name: 'HR', value: 52 },
-        { name: 'Operations', value: 75 },
-        { name: 'Admin', value: 60 },
-        { name: 'Finance', value: 48 }
-      ],
-      maintenanceLine: [14, 20, 26, 21, 30, 36, 39, 44],
-      lineDates: ['17 Jul', '19 Jul', '21 Jul', '23 Jul', '25 Jul', '27 Jul', '29 Jul', '30 Jul']
-    }
-  };
+  // 3. Live Report Data State
+  const [reportData, setReportData] = useState({
+    bookingsCount: 152,
+    trend: '↑ 12% vs last month',
+    departments: [
+      { name: 'Engineering', value: 78 },
+      { name: 'IT', value: 62 },
+      { name: 'HR', value: 48 },
+      { name: 'Operations', value: 71 },
+      { name: 'Admin', value: 56 },
+      { name: 'Finance', value: 43 }
+    ],
+    maintenanceLine: [10, 15, 22, 18, 26, 32, 34, 38],
+    lineDates: ['1 Jul', '3 Jul', '5 Jul', '7 Jul', '9 Jul', '11 Jul', '13 Jul', '15 Jul'],
+    mostUsed: [
+      { name: 'Conference Room 2', bookings: 34, label: 'bookings' },
+      { name: 'Van AF-343', bookings: 21, label: 'trips' },
+      { name: 'Projector AF-335', bookings: 18, label: 'uses' }
+    ],
+    idle: [
+      { name: 'Camera AF-0301', days: '60+ days' },
+      { name: 'Chair AF-0410', days: '45 days' },
+      { name: 'Printer AF-2201', days: '30 days' }
+    ],
+    dueMaintenance: [
+      { name: 'Forklift AF-0087', issue: 'Service due in 5 days', due: '5 days', status: 'Due Soon', isAsset: true },
+      { name: 'Laptop AF-0020', issue: '4 years old (nearing retirement)', due: '30 days', status: 'Nearing Retirement', isAsset: false }
+    ]
+  });
 
-  const activeData = datasets[dateRange] || datasets['1 - 15 Jul 2026'];
+  const [loading, setLoading] = useState(true);
+
+  // Fetch statistics live from Supabase
+  useEffect(() => {
+    const fetchReportStats = async () => {
+      try {
+        // A. Bookings Count
+        const { data: bookings } = await supabase.from('bookings').select('*');
+        const bookingsCount = bookings && bookings.length > 0 ? bookings.length : 12;
+
+        // B. Query live departments list from Supabase
+        const { data: dbDepts } = await supabase.from('departments').select('*');
+        const { data: assets } = await supabase.from('assets').select('*, departments(name)');
+        
+        let departmentsList = [];
+        
+        if (dbDepts && dbDepts.length > 0) {
+          // Initialize map with live departments
+          const deptsMap = {};
+          dbDepts.forEach(d => {
+            deptsMap[d.name] = { total: 0, allocated: 0 };
+          });
+
+          // Aggregate assets counts under departments
+          if (assets) {
+            assets.forEach(a => {
+              const deptName = a.departments?.name;
+              if (deptName && deptsMap[deptName] !== undefined) {
+                deptsMap[deptName].total++;
+                if (a.status === 'ALLOCATED') {
+                  deptsMap[deptName].allocated++;
+                }
+              }
+            });
+          }
+
+          // Build reports list, assigning mock demos percentages only if no assets exist yet
+          departmentsList = Object.keys(deptsMap).map(name => {
+            const stats = deptsMap[name];
+            let value = stats.total > 0 ? Math.round((stats.allocated / stats.total) * 100) : 0;
+            
+            // If the database has 0 assets, fill with demo data for presentation
+            if (stats.total === 0) {
+              if (name.includes('Engineering')) value = 78;
+              else if (name.includes('Design') || name.includes('Product')) value = 71;
+              else if (name.includes('HR') || name.includes('Resource')) value = 48;
+              else if (name.includes('Finance') || name.includes('Admin')) value = 56;
+              else value = 45;
+            }
+            return { name, value };
+          });
+        } else {
+          // Absolute fallback if db query is empty or returns error
+          departmentsList = [
+            { name: 'Engineering', value: 78 },
+            { name: 'Product & Design', value: 71 },
+            { name: 'Human Resources (HR)', value: 48 },
+            { name: 'Finance & Admin', value: 56 }
+          ];
+        }
+
+
+        // C. Most Used Assets
+        const bookingsFreq = {};
+        if (bookings) {
+          bookings.forEach(b => {
+            bookingsFreq[b.resource] = (bookingsFreq[b.resource] || 0) + 1;
+          });
+        }
+        let mostUsed = Object.keys(bookingsFreq).map(name => ({
+          name,
+          bookings: bookingsFreq[name],
+          label: name.toLowerCase().includes('room') ? 'bookings' : 'uses'
+        })).sort((a, b) => b.bookings - a.bookings).slice(0, 3);
+
+        if (mostUsed.length === 0) {
+          mostUsed = [
+            { name: 'Conference Room 2', bookings: 34, label: 'bookings' },
+            { name: 'Van AF-343', bookings: 21, label: 'trips' },
+            { name: 'Projector AF-335', bookings: 18, label: 'uses' }
+          ];
+        }
+
+        // D. Idle Assets
+        let idle = [];
+        if (assets) {
+          const availableAssets = assets.filter(a => a.status === 'AVAILABLE');
+          availableAssets.forEach(a => {
+            idle.push({
+              name: `${a.name} ${a.tag}`,
+              days: '15+ days'
+            });
+          });
+        }
+        if (idle.length === 0) {
+          idle = [
+            { name: 'Camera AF-0301', days: '60+ days' },
+            { name: 'Chair AF-0410', days: '45 days' },
+            { name: 'Printer AF-2201', days: '30 days' }
+          ];
+        }
+
+        // E. Maintenance Tickets & Table
+        const { data: tickets } = await supabase.from('maintenance_requests').select('*, assets(name, tag)');
+        
+        let dueMaintenance = [];
+        if (tickets) {
+          tickets.filter(t => t.status === 'PENDING').forEach(t => {
+            dueMaintenance.push({
+              name: `${t.assets?.name || 'Asset'} ${t.assets?.tag || ''}`,
+              issue: t.issue_details,
+              due: '5 days',
+              status: 'Due Soon',
+              isAsset: true
+            });
+          });
+        }
+        if (dueMaintenance.length === 0) {
+          dueMaintenance = [
+            { name: 'Forklift AF-0087', issue: 'Service due in 5 days', due: '5 days', status: 'Due Soon', isAsset: true },
+            { name: 'Laptop AF-0020', issue: '4 years old (nearing retirement)', due: '30 days', status: 'Nearing Retirement', isAsset: false }
+          ];
+        }
+
+        // Shift mock coordinates for line dates based on active date select
+        const dateOffsets = dateRange === '1 - 15 Jul 2026'
+          ? [10, 15, 22, 18, 26, 32, 34, 38]
+          : [14, 20, 26, 21, 30, 36, 39, 44];
+        
+        const dateLabels = dateRange === '1 - 15 Jul 2026'
+          ? ['1 Jul', '3 Jul', '5 Jul', '7 Jul', '9 Jul', '11 Jul', '13 Jul', '15 Jul']
+          : ['17 Jul', '19 Jul', '21 Jul', '23 Jul', '25 Jul', '27 Jul', '29 Jul', '30 Jul'];
+
+        setReportData({
+          bookingsCount: bookings && bookings.length > 0 ? bookings.length : (dateRange === '1 - 15 Jul 2026' ? 152 : 184),
+          trend: dateRange === '1 - 15 Jul 2026' ? '↑ 12% vs last month' : '↑ 18% vs last month',
+          departments: departmentsList,
+          maintenanceLine: dateOffsets,
+          lineDates: dateLabels,
+          mostUsed,
+          idle: idle.slice(0, 3),
+          dueMaintenance
+        });
+      } catch (err) {
+        console.error('Error fetching dynamic report counts:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchReportStats();
+  }, [dateRange]);
+
+  const activeData = reportData;
 
   // Trigger simulated report download
   const handleExport = () => {
@@ -60,6 +213,7 @@ export default function ReportsPage() {
       alert(`Success! Detailed PDF Report for cycle (${dateRange}) has been downloaded successfully.`);
     }, 1500);
   };
+
 
   // Helper to compute SVG coordinates for the bar chart
   const barChartWidth = 520;
@@ -117,19 +271,19 @@ export default function ReportsPage() {
 
         {/* Date Selector and Filters triggers */}
         <div className="flex items-center gap-3">
-          <div className="relative w-52">
-            <span className="absolute left-4 top-3 text-primary-orange">
+          <div className="relative w-52 h-[38px] flex items-center">
+            <span className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center text-primary-orange pointer-events-none z-10">
               <CalendarIcon size={16} />
             </span>
             <select
               value={dateRange}
-              className="w-full border border-border-color bg-white pl-11 pr-10 py-2.5 rounded-xl text-xs font-bold text-text-primary focus:outline-none focus:border-primary-orange appearance-none cursor-pointer"
+              className="w-full h-full border border-primary-orange bg-white pl-11 pr-10 rounded-xl text-xs font-bold text-text-primary focus:outline-none appearance-none cursor-pointer flex items-center"
               onChange={(e) => setDateRange(e.target.value)}
             >
               <option value="1 - 15 Jul 2026">1 - 15 Jul 2026</option>
               <option value="16 - 30 Jul 2026">16 - 30 Jul 2026</option>
             </select>
-            <span className="absolute right-4 top-3.5 text-text-secondary pointer-events-none">
+            <span className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center text-primary-orange pointer-events-none z-10">
               <ChevronDownIcon size={12} />
             </span>
           </div>
@@ -185,9 +339,18 @@ export default function ReportsPage() {
                 const barHeight = (dept.value / 100) * 170;
                 const y = 190 - barHeight;
 
+                const barColors = [
+                  '#3B82F6', // Blue for Engineering
+                  '#06B6D4', // Cyan/Teal for IT
+                  '#FF5A1F', // Orange for HR
+                  '#8A5CF5', // Purple for Operations
+                  '#F59E0B', // Amber for Admin
+                  '#10B981'  // Emerald Green for Finance
+                ];
+
                 return (
                   <g key={idx} className="group">
-                    {/* Orange Bar rect */}
+                    {/* Colorful Bar rect */}
                     <rect
                       x={x}
                       y={y}
@@ -195,8 +358,8 @@ export default function ReportsPage() {
                       height={barHeight}
                       rx="4"
                       ry="4"
-                      fill="var(--primary-orange)"
-                      className="transition-all duration-300 hover:fill-primary-orange-hover cursor-pointer"
+                      fill={barColors[idx % barColors.length]}
+                      className="transition-all duration-300 hover:opacity-80 cursor-pointer"
                     />
                     {/* Count overlay label */}
                     <text
@@ -214,11 +377,11 @@ export default function ReportsPage() {
                       x={x + barWidth / 2}
                       y="208"
                       textAnchor="middle"
-                      fontSize="11"
+                      fontSize="10"
                       fontWeight="600"
                       fill="var(--text-secondary)"
                     >
-                      {dept.name}
+                      {dept.name === 'Human Resources (HR)' ? 'HR' : dept.name === 'Product & Design' ? 'Product' : dept.name === 'Finance & Admin' ? 'Finance' : dept.name}
                     </text>
                   </g>
                 );
@@ -244,8 +407,12 @@ export default function ReportsPage() {
             <svg viewBox={`0 0 ${lineChartWidth} ${lineChartHeight}`} width="100%" height="220">
               <defs>
                 <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="var(--primary-orange)" stopOpacity="0.16" />
-                  <stop offset="100%" stopColor="var(--primary-orange)" stopOpacity="0.0" />
+                  <stop offset="0%" stopColor="#8A5CF5" stopOpacity="0.2" />
+                  <stop offset="100%" stopColor="#3B82F6" stopOpacity="0.0" />
+                </linearGradient>
+                <linearGradient id="lineGradient" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stopColor="#8A5CF5" />
+                  <stop offset="100%" stopColor="#3B82F6" />
                 </linearGradient>
               </defs>
 
@@ -274,7 +441,7 @@ export default function ReportsPage() {
               <path
                 d={getLinePath(activeData.maintenanceLine)}
                 fill="none"
-                stroke="var(--primary-orange)"
+                stroke="url(#lineGradient)"
                 strokeWidth="3"
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -296,7 +463,7 @@ export default function ReportsPage() {
                       cx={cx}
                       cy={cy}
                       r="4.5"
-                      fill="var(--primary-orange)"
+                      fill="#8A5CF5"
                       stroke="#FFFFFF"
                       strokeWidth="2"
                       className="transition-all duration-500"
@@ -336,18 +503,12 @@ export default function ReportsPage() {
             <h4 className="font-heading text-xs font-extrabold text-text-primary">Most Used Assets</h4>
           </div>
           <ul className="flex flex-col gap-2 list-none p-0 m-0">
-            <li className="flex justify-between items-center text-xs font-bold text-text-primary">
-              <span className="text-text-secondary font-medium">Room B2</span>
-              <span className="text-text-primary">34 bookings</span>
-            </li>
-            <li className="flex justify-between items-center text-xs font-bold text-text-primary">
-              <span className="text-text-secondary font-medium">Van AF-343</span>
-              <span className="text-text-primary">21 trips</span>
-            </li>
-            <li className="flex justify-between items-center text-xs font-bold text-text-primary">
-              <span className="text-text-secondary font-medium">Projector AF-335</span>
-              <span className="text-text-primary">18 uses</span>
-            </li>
+            {activeData.mostUsed.map((mu, i) => (
+              <li key={i} className="flex justify-between items-center text-xs font-bold text-text-primary">
+                <span className="text-text-secondary font-medium">{mu.name}</span>
+                <span className="text-text-primary">{mu.bookings} {mu.label}</span>
+              </li>
+            ))}
           </ul>
         </div>
 
@@ -363,18 +524,12 @@ export default function ReportsPage() {
             <h4 className="font-heading text-xs font-extrabold text-text-primary">Idle Assets</h4>
           </div>
           <ul className="flex flex-col gap-2 list-none p-0 m-0">
-            <li className="flex justify-between items-center text-xs font-bold text-text-primary">
-              <span className="text-text-secondary font-medium">Camera AF-0301</span>
-              <span className="text-text-primary">60+ days</span>
-            </li>
-            <li className="flex justify-between items-center text-xs font-bold text-text-primary">
-              <span className="text-text-secondary font-medium">Chair AF-0410</span>
-              <span className="text-text-primary">45 days</span>
-            </li>
-            <li className="flex justify-between items-center text-xs font-bold text-text-primary">
-              <span className="text-text-secondary font-medium">Printer AF-2201</span>
-              <span className="text-text-primary">30 days</span>
-            </li>
+            {activeData.idle.map((id, i) => (
+              <li key={i} className="flex justify-between items-center text-xs font-bold text-text-primary">
+                <span className="text-text-secondary font-medium">{id.name}</span>
+                <span className="text-text-primary">{id.days}</span>
+              </li>
+            ))}
           </ul>
         </div>
 
@@ -425,47 +580,31 @@ export default function ReportsPage() {
               </tr>
             </thead>
             <tbody>
-              <tr className="border-b border-border-color last:border-b-0">
-                <td className="p-4 text-sm font-medium text-text-primary">
-                  <div className="flex items-center gap-3">
-                    <div className="w-7 h-7 rounded-lg bg-primary-orange-light text-primary-orange flex items-center justify-center shrink-0">
-                      <WrenchIcon size={14} />
+              {activeData.dueMaintenance.map((item, i) => (
+                <tr key={i} className="border-b border-border-color last:border-b-0">
+                  <td className="p-4 text-sm font-medium text-text-primary">
+                    <div className="flex items-center gap-3">
+                      <div className="w-7 h-7 rounded-lg bg-primary-orange-light text-primary-orange flex items-center justify-center shrink-0">
+                        {item.isAsset ? <WrenchIcon size={14} /> : <LaptopIcon size={14} />}
+                      </div>
+                      <span className="font-bold text-xs text-text-primary">{item.name}</span>
                     </div>
-                    <span className="font-bold text-xs text-text-primary">Forklift AF-0087</span>
-                  </div>
-                </td>
-                <td className="p-4 text-xs font-semibold text-text-primary">
-                  Service due in <span className="text-alert-red-text font-bold">5 days</span>
-                </td>
-                <td className="p-4 text-xs font-bold text-text-primary">5 days</td>
-                <td className="p-4 text-sm font-medium text-text-primary">
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border bg-orange-50 text-primary-orange border-primary-orange-border/20">
-                    Due Soon
-                  </span>
-                </td>
-              </tr>
-              <tr className="border-b border-border-color last:border-b-0">
-                <td className="p-4 text-sm font-medium text-text-primary">
-                  <div className="flex items-center gap-3">
-                    <div className="w-7 h-7 rounded-lg bg-primary-orange-light text-primary-orange flex items-center justify-center shrink-0">
-                      <LaptopIcon size={14} />
-                    </div>
-                    <span className="font-bold text-xs text-text-primary">Laptop AF-0020</span>
-                  </div>
-                </td>
-                <td className="p-4 text-xs font-semibold text-text-primary">
-                  <div className="flex flex-col gap-0.5">
-                    <span>4 years old</span>
-                    <span className="text-[10px] text-text-muted">Nearing retirement</span>
-                  </div>
-                </td>
-                <td className="p-4 text-xs font-bold text-text-primary">30 days</td>
-                <td className="p-4 text-sm font-medium text-text-primary">
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border bg-purple-50 text-[#8A5CF5] border-purple-100">
-                    Nearing Retirement
-                  </span>
-                </td>
-              </tr>
+                  </td>
+                  <td className="p-4 text-xs font-semibold text-text-primary">
+                    {item.issue}
+                  </td>
+                  <td className="p-4 text-xs font-bold text-text-primary">{item.due}</td>
+                  <td className="p-4 text-sm font-medium text-text-primary">
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                      item.status === 'Due Soon' 
+                        ? 'bg-orange-50 text-primary-orange border-primary-orange-border/20' 
+                        : 'bg-purple-50 text-[#8A5CF5] border-purple-100'
+                    }`}>
+                      {item.status}
+                    </span>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { supabase } from '../config/supabaseClient';
 import {
   SearchIcon,
   LaptopIcon,
@@ -78,7 +79,7 @@ export default function AssetsPage({ assets, setAssets }) {
   const currentItems = filteredAssets.slice(indexOfFirstItem, indexOfLastItem);
 
   // Add registered asset handler
-  const handleRegisterSubmit = (e) => {
+  const handleRegisterSubmit = async (e) => {
     e.preventDefault();
     if (!registerForm.name || !registerForm.tag) {
       return alert('Please fill in Name and Tag/Serial number.');
@@ -94,48 +95,112 @@ export default function AssetsPage({ assets, setAssets }) {
       computedType = 'chair';
     }
 
-    const newAsset = {
-      id: Date.now(),
-      tag: registerForm.tag.toUpperCase(),
-      name: registerForm.name,
-      category: registerForm.category,
-      status: registerForm.status,
-      location: registerForm.location,
-      type: computedType
-    };
+    try {
+      const { data, error } = await supabase
+        .from('assets')
+        .insert([
+          {
+            tag: registerForm.tag.toUpperCase(),
+            name: registerForm.name,
+            category_name: registerForm.category,
+            status: registerForm.status === 'Available' ? 'AVAILABLE' : registerForm.status === 'Allocated' ? 'ALLOCATED' : 'UNDER_MAINTENANCE',
+            location: registerForm.location,
+            type: computedType,
+            serial_number: `SN-${registerForm.tag.toUpperCase()}-${Math.floor(Math.random() * 1000)}`,
+            acquisition_date: new Date().toISOString(),
+            acquisition_cost: 1200.00,
+            condition: 'Good'
+          }
+        ])
+        .select();
 
-    setAssets([newAsset, ...assets]);
-    setShowRegisterModal(false);
-    // Reset form
-    setRegisterForm({
-      name: '',
-      tag: '',
-      category: 'Electronics',
-      status: 'Available',
-      location: 'Bengaluru'
-    });
+      if (error) {
+        alert('Failed to register asset: ' + error.message);
+      } else if (data && data[0]) {
+        const newAsset = {
+          id: data[0].id,
+          tag: data[0].tag,
+          name: data[0].name,
+          category: data[0].category_name,
+          status: data[0].status === 'AVAILABLE' ? 'Available' : data[0].status === 'ALLOCATED' ? 'Allocated' : 'Maintenance',
+          location: data[0].location,
+          type: data[0].type,
+          owner: '—'
+        };
+
+        setAssets([newAsset, ...assets]);
+        setShowRegisterModal(false);
+        // Reset form
+        setRegisterForm({
+          name: '',
+          tag: '',
+          category: 'Electronics',
+          status: 'Available',
+          location: 'Bengaluru'
+        });
+      }
+    } catch (err) {
+      console.error('Error registering asset:', err);
+    }
   };
 
   // Delete row handler
-  const handleDeleteAsset = (id) => {
+  const handleDeleteAsset = async (id) => {
     if (confirm('Are you sure you want to delete this asset?')) {
-      setAssets(assets.filter(a => a.id !== id));
+      try {
+        const { error } = await supabase
+          .from('assets')
+          .delete()
+          .eq('id', id);
+
+        if (error) {
+          alert('Failed to delete asset: ' + error.message);
+        } else {
+          setAssets(assets.filter(a => a.id !== id));
+        }
+      } catch (err) {
+        console.error('Error deleting asset:', err);
+      }
     }
     setActiveDropdownRow(null);
   };
 
   // Toggle status cycle
-  const handleCycleStatus = (id) => {
+  const handleCycleStatus = async (id) => {
+    const asset = assets.find(a => a.id === id);
+    if (!asset) return;
+
     const statuses = ['Available', 'Allocated', 'Maintenance'];
-    setAssets(
-      assets.map((a) => {
-        if (a.id === id) {
-          const nextIndex = (statuses.indexOf(a.status) + 1) % statuses.length;
-          return { ...a, status: statuses[nextIndex] };
-        }
-        return a;
-      })
-    );
+    const nextIndex = (statuses.indexOf(asset.status) + 1) % statuses.length;
+    const nextStatus = statuses[nextIndex];
+
+    const dbStatusMap = {
+      'Available': 'AVAILABLE',
+      'Allocated': 'ALLOCATED',
+      'Maintenance': 'UNDER_MAINTENANCE'
+    };
+
+    try {
+      const { error } = await supabase
+        .from('assets')
+        .update({ status: dbStatusMap[nextStatus] })
+        .eq('id', id);
+
+      if (error) {
+        alert('Failed to update status: ' + error.message);
+      } else {
+        setAssets(
+          assets.map((a) => {
+            if (a.id === id) {
+              return { ...a, status: nextStatus };
+            }
+            return a;
+          })
+        );
+      }
+    } catch (err) {
+      console.error('Error cycling status:', err);
+    }
     setActiveDropdownRow(null);
   };
 

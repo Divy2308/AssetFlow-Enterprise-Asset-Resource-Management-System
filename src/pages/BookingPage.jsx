@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import { supabase } from '../config/supabaseClient';
 import {
   CalendarIcon,
   ChevronLeftIcon,
@@ -17,17 +18,8 @@ export default function BookingPage() {
   const [activeDate, setActiveDate] = useState(new Date('2026-07-07'));
 
   // 3. Bookings Registry State
-  const [bookings, setBookings] = useState([
-    // Tue, 7 Jul 2026: Conference Room 2
-    { id: 1, resource: 'Conference Room 2', date: '2026-07-07', start: 9.0, end: 10.0, title: 'Booked - Procurement Team', timeStr: '09:00 AM - 10:00 AM', isConflict: false, detail: '' },
-    { id: 2, resource: 'Conference Room 2', date: '2026-07-07', start: 9.5, end: 10.5, title: 'Requested 9:30 AM - 10:30 AM', timeStr: '09:30 AM - 10:30 AM', isConflict: true, detail: 'Conflict - Slot is unavailable' },
-    
-    // Tue, 7 Jul 2026: Projector B
-    { id: 3, resource: 'Projector B', date: '2026-07-07', start: 11.0, end: 12.5, title: 'Booked - Marketing Team', timeStr: '11:00 AM - 12:30 PM', isConflict: false, detail: '' },
-    
-    // Tue, 7 Jul 2026: Training Room 1
-    { id: 4, resource: 'Training Room 1', date: '2026-07-07', start: 13.0, end: 14.0, title: 'Booked - HR Training', timeStr: '01:00 PM - 02:00 PM', isConflict: false, detail: '' }
-  ]);
+  const [bookings, setBookings] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   // 4. Booking Modal State
   const [showBookingModal, setShowBookingModal] = useState(false);
@@ -36,6 +28,23 @@ export default function BookingPage() {
     startStr: '09:00 AM',
     endStr: '10:00 AM'
   });
+
+  const gridContainerRef = useRef(null);
+
+  // Automatically scroll grid to show relevant start times on resource/date change
+  useEffect(() => {
+    if (gridContainerRef.current) {
+      const earliestStart = activeBookings.length > 0 
+        ? Math.min(...activeBookings.map(b => b.start)) 
+        : 8.0;
+      // Scroll to 1 hour before the earliest start time, clamped to the top
+      const scrollToHour = Math.max(0, earliestStart - 1);
+      gridContainerRef.current.scrollTo({
+        top: scrollToHour * hourHeight,
+        behavior: 'smooth'
+      });
+    }
+  }, [selectedResource, activeDate]);
 
   // Date Formatting Helper (e.g. "Tue, 7 Jul 2026")
   const formatDate = (date) => {
@@ -68,10 +77,104 @@ export default function BookingPage() {
 
   const activeDateStr = getDateString(activeDate);
 
+  // Fetch bookings dynamically from Supabase
+  useEffect(() => {
+    const fetchBookings = async () => {
+      setLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('bookings')
+          .select('*')
+          .eq('resource', selectedResource)
+          .eq('booking_date', activeDateStr);
+
+        if (error) {
+          console.error('Error fetching bookings:', error.message);
+        } else if (data) {
+          const formattedData = data.map(b => ({
+            id: b.id,
+            resource: b.resource,
+            date: b.booking_date,
+            start: parseFloat(b.start_time),
+            end: parseFloat(b.end_time),
+            title: b.title,
+            timeStr: b.time_str,
+            isConflict: b.is_conflict,
+            detail: b.detail
+          }));
+          setBookings(formattedData);
+        }
+      } catch (err) {
+        console.error('Failed to query bookings:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchBookings();
+  }, [selectedResource, activeDateStr]);
+
   // Filtered bookings for current Resource and Date
   const activeBookings = bookings.filter(
     (b) => b.resource === selectedResource && b.date === activeDateStr
   );
+
+  // Sort activeBookings by start time, then by end time
+  const sortedBookings = [...activeBookings].sort((a, b) => {
+    if (a.start !== b.start) return a.start - b.start;
+    return a.end - b.end;
+  });
+
+  // Group bookings into clusters of overlapping events
+  const clusters = [];
+  let currentCluster = [];
+  let currentEnd = 0;
+
+  sortedBookings.forEach((booking) => {
+    if (booking.start >= currentEnd) {
+      if (currentCluster.length > 0) {
+        clusters.push(currentCluster);
+      }
+      currentCluster = [booking];
+      currentEnd = booking.end;
+    } else {
+      currentCluster.push(booking);
+      if (booking.end > currentEnd) {
+        currentEnd = booking.end;
+      }
+    }
+  });
+  if (currentCluster.length > 0) {
+    clusters.push(currentCluster);
+  }
+
+  // Assign columns within each cluster to avoid overlaps
+  clusters.forEach((cluster) => {
+    const clusterCols = [];
+    cluster.forEach((booking) => {
+      let placed = false;
+      for (let i = 0; i < clusterCols.length; i++) {
+        // Check if booking overlaps with any booking already in column i
+        const hasOverlap = clusterCols[i].some(
+          (b) => booking.start < b.end && booking.end > b.start
+        );
+        if (!hasOverlap) {
+          clusterCols[i].push(booking);
+          booking.colIndex = i;
+          placed = true;
+          break;
+        }
+      }
+      if (!placed) {
+        booking.colIndex = clusterCols.length;
+        clusterCols.push([booking]);
+      }
+    });
+    // Store the total columns count in the cluster for width calculations
+    cluster.forEach((booking) => {
+      booking.totalCols = clusterCols.length;
+    });
+  });
 
   // Time formatting helper (e.g. 9.5 -> "09:30 AM")
   const formatDecimalTime = (decimal) => {
@@ -83,7 +186,8 @@ export default function BookingPage() {
   };
 
   // Parse time select option value to decimal hour (e.g. "09:30 AM" -> 9.5)
-  const parseTimeToDecimal = (timeStr) => {
+  const parseTimeToDecimal = (timeStr, isEndTime = false) => {
+    if (timeStr === '12:00 AM (Next Day)') return 24.0;
     const [time, ampm] = timeStr.split(' ');
     const [hours, mins] = time.split(':').map(Number);
     let decimal = hours === 12 ? 0 : hours;
@@ -92,18 +196,37 @@ export default function BookingPage() {
     return decimal;
   };
 
-  // Timeline Hours
-  const HOURS = [9, 10, 11, 12, 13, 14]; // 9 AM to 2 PM (14.0 is 2 PM)
+  // Timeline Hours (0 to 23 representing 12:00 AM to 11:00 PM)
+  const HOURS = Array.from({ length: 24 }, (_, i) => i);
   const hourHeight = 80;
 
+  // Generate options for the start/end time selectors in the modal
+  const startOptions = [];
+  const endOptions = [];
+  for (let h = 0; h < 24; h++) {
+    const h12 = h % 12 === 0 ? 12 : h % 12;
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const padH = String(h12).padStart(2, '0');
+    
+    startOptions.push(`${padH}:00 ${ampm}`);
+    startOptions.push(`${padH}:30 ${ampm}`);
+    
+    endOptions.push(`${padH}:00 ${ampm}`);
+    endOptions.push(`${padH}:30 ${ampm}`);
+  }
+  const filteredEndOptions = [
+    ...endOptions.slice(1),
+    '12:00 AM (Next Day)'
+  ];
+
   // Handle slot booking form submit
-  const handleBookingSubmit = (e) => {
+  const handleBookingSubmit = async (e) => {
     e.preventDefault();
     const { purpose, startStr, endStr } = newBookingForm;
     if (!purpose.trim()) return alert('Please enter a team name/purpose.');
 
-    const startDec = parseTimeToDecimal(startStr);
-    const endDec = parseTimeToDecimal(endStr);
+    const startDec = parseTimeToDecimal(startStr, false);
+    const endDec = parseTimeToDecimal(endStr, true);
 
     if (startDec >= endDec) {
       return alert('End time must be after the start time.');
@@ -114,26 +237,55 @@ export default function BookingPage() {
       return !b.isConflict && (startDec < b.end) && (endDec > b.start);
     });
 
-    const newBooking = {
-      id: Date.now(),
-      resource: selectedResource,
-      date: activeDateStr,
-      start: startDec,
-      end: endDec,
-      title: overlapExists ? `Requested ${startStr} - ${endStr}` : `Booked - ${purpose}`,
-      timeStr: `${startStr} - ${endStr}`,
-      isConflict: overlapExists,
-      detail: overlapExists ? 'Conflict - Slot is unavailable' : ''
-    };
+    const isConflict = overlapExists;
+    const finalTitle = overlapExists ? `Requested ${startStr} - ${endStr}` : `Booked - ${purpose}`;
+    const detail = overlapExists ? 'Conflict - Slot is unavailable' : '';
 
-    setBookings([...bookings, newBooking]);
-    setShowBookingModal(false);
-    setNewBookingForm({ purpose: '', startStr: '09:00 AM', endStr: '10:00 AM' });
+    try {
+      const { data, error } = await supabase
+        .from('bookings')
+        .insert([
+          {
+            resource: selectedResource,
+            booking_date: activeDateStr,
+            start_time: startDec,
+            end_time: endDec,
+            title: finalTitle,
+            time_str: `${startStr} - ${endStr}`,
+            is_conflict: isConflict,
+            detail: detail,
+            booked_by_id: 1 // default test employee
+          }
+        ])
+        .select();
 
-    if (overlapExists) {
-      alert('Scheduling Conflict! Your requested slot overlaps with an existing booking and has been flagged in red.');
-    } else {
-      alert('Success! Your resource slot has been booked.');
+      if (error) {
+        alert('Failed to book slot: ' + error.message);
+      } else if (data && data[0]) {
+        const savedBooking = {
+          id: data[0].id,
+          resource: data[0].resource,
+          date: data[0].booking_date,
+          start: parseFloat(data[0].start_time),
+          end: parseFloat(data[0].end_time),
+          title: data[0].title,
+          timeStr: data[0].time_str,
+          isConflict: data[0].is_conflict,
+          detail: data[0].detail
+        };
+        setBookings([...bookings, savedBooking]);
+        setShowBookingModal(false);
+        setNewBookingForm({ purpose: '', startStr: '09:00 AM', endStr: '10:00 AM' });
+
+        if (overlapExists) {
+          alert('Scheduling Conflict! Your requested slot overlaps with an existing booking and has been flagged in red.');
+        } else {
+          alert('Success! Your resource slot has been booked.');
+        }
+      }
+    } catch (err) {
+      console.error('Error saving booking:', err);
+      alert('Failed to save booking. Please try again.');
     }
   };
 
@@ -192,71 +344,92 @@ export default function BookingPage() {
 
       {/* 2. Schedule Grid Card */}
       <div className="bg-white border border-border-color rounded-2xl p-6 shadow-sm flex flex-col gap-6">
-        <div className="relative border-l border-border-color ml-24" style={{ height: `${HOURS.length * hourHeight}px` }}>
-          
-          {/* Hour grid lines */}
-          {HOURS.map((hr, idx) => (
-            <div 
-              key={idx} 
-              className="relative border-t border-border-color border-dashed first:border-t-0 w-full"
-              style={{ height: `${hourHeight}px` }}
-            >
-              <span className="absolute right-full mr-4 -top-3.5 text-[11px] font-bold text-text-secondary text-right select-none w-20">
-                {formatDecimalTime(hr)}
-              </span>
-            </div>
-          ))}
+        
+        {/* Scrollable Container for 24-hour timeline */}
+        <div 
+          ref={gridContainerRef}
+          className="w-full overflow-y-auto max-h-[500px] pr-2 relative"
+          style={{
+            scrollbarWidth: 'thin',
+            scrollbarColor: '#CBD5E1 transparent'
+          }}
+        >
+          <div className="relative border-l border-border-color ml-24" style={{ height: `${HOURS.length * hourHeight}px` }}>
+            
+            {/* Hour grid lines */}
+            {HOURS.map((hr, idx) => (
+              <div 
+                key={idx} 
+                className="relative border-t border-border-color border-dashed first:border-t-0 w-full"
+                style={{ height: `${hourHeight}px` }}
+              >
+                <span className="absolute right-full mr-4 -top-3.5 text-[11px] font-bold text-text-secondary text-right select-none w-20">
+                  {formatDecimalTime(hr)}
+                </span>
+              </div>
+            ))}
 
-          {/* Overlapping Slot items */}
-          <div className="absolute inset-0">
-            {activeBookings.map((slot) => {
-              // Calculate top offset and height based on decimal start and end times
-              const top = (slot.start - 9.0) * hourHeight;
-              const height = (slot.end - slot.start) * hourHeight;
+            {/* Overlapping Slot items */}
+            <div className="absolute inset-0">
+              {sortedBookings.map((slot) => {
+                // Calculate top offset and height based on decimal start and end times
+                const top = slot.start * hourHeight;
+                const height = (slot.end - slot.start) * hourHeight;
 
-              // Visual overlap handling: conflict cards are offset slightly to the right (left: 60px)
-              const leftStyle = slot.isConflict ? '60px' : '0px';
-              const widthStyle = slot.isConflict ? 'calc(100% - 70px)' : 'calc(100% - 16px)';
-              
-              // Icon representation
-              const SlotIcon = slot.isConflict ? ClockIcon : UsersIcon;
+                // Calculate positioning based on overlapping columns
+                let leftStyle = '0px';
+                let widthStyle = 'calc(100% - 16px)';
+                if (slot.totalCols > 1) {
+                  leftStyle = `calc((100% - 16px) * ${slot.colIndex} / ${slot.totalCols})`;
+                  widthStyle = `calc((100% - 16px) / ${slot.totalCols} - 6px)`;
+                }
+                
+                // Icon representation
+                const SlotIcon = slot.isConflict ? ClockIcon : UsersIcon;
 
-              return (
-                <div
-                  key={slot.id}
-                  className={`absolute rounded-xl p-4 flex gap-3 text-left transition-all duration-300 shadow-xs border ${
-                    slot.isConflict 
-                      ? 'bg-red-50 border-alert-red-border/40 border-dashed text-alert-red-text' 
-                      : 'bg-primary-orange-light border-primary-orange-border/30 text-text-primary'
-                  }`}
-                  style={{
-                    top: `${top}px`,
-                    height: `${height - 4}px`, // Slight subtraction to provide a margin gap
-                    left: leftStyle,
-                    width: widthStyle
-                  }}
-                >
-                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
-                    slot.isConflict ? 'bg-red-100 text-alert-red-text' : 'bg-[#FFF4EF] text-primary-orange'
-                  }`}>
-                    <SlotIcon size={18} strokeWidth={2.4} />
-                  </div>
-                  <div className="flex flex-col flex-grow">
-                    <div className={`text-xs font-extrabold ${slot.isConflict ? 'text-alert-red-text' : 'text-primary-orange'}`}>
-                      {slot.title}
-                    </div>
-                    <div className="text-[11px] font-bold text-text-secondary mt-0.5">{slot.timeStr}</div>
-                    {slot.detail && (
-                      <div className="text-[10px] font-extrabold text-alert-red-text mt-1.5">
-                        {slot.detail}
+                // Card styling depending on slot duration
+                const isShort = height < 50;
+                const paddingClass = isShort ? 'py-1 px-2.5 gap-2' : 'p-3.5 gap-3';
+
+                return (
+                  <div
+                    key={slot.id}
+                    className={`absolute rounded-xl flex text-left transition-all duration-300 shadow-xs border ${paddingClass} ${
+                      slot.isConflict 
+                        ? 'bg-red-50 border-alert-red-border/40 border-dashed text-alert-red-text' 
+                        : 'bg-primary-orange-light border-primary-orange-border/30 text-text-primary'
+                    }`}
+                    style={{
+                      top: `${top}px`,
+                      height: `${height - 4}px`, // Slight subtraction to provide a margin gap
+                      left: leftStyle,
+                      width: widthStyle
+                    }}
+                  >
+                    {!isShort && (
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                        slot.isConflict ? 'bg-red-100 text-alert-red-text' : 'bg-[#FFF4EF] text-primary-orange'
+                      }`}>
+                        <SlotIcon size={16} strokeWidth={2.4} />
                       </div>
                     )}
+                    <div className="flex flex-col flex-grow min-w-0 justify-center">
+                      <div className={`text-xs font-extrabold truncate ${slot.isConflict ? 'text-alert-red-text' : 'text-primary-orange'}`}>
+                        {slot.title}
+                      </div>
+                      <div className="text-[11px] font-bold text-text-secondary mt-0.5 truncate">{slot.timeStr}</div>
+                      {!isShort && slot.detail && (
+                        <div className="text-[10px] font-extrabold text-alert-red-text mt-1.5 truncate">
+                          {slot.detail}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
 
+          </div>
         </div>
 
         {/* Dynamic Booking Button */}
@@ -319,16 +492,9 @@ export default function BookingPage() {
                     className="w-full border border-border-color bg-white pl-11 pr-10 py-2.5 rounded-xl text-sm font-semibold focus:outline-none focus:border-primary-orange text-text-primary appearance-none cursor-pointer"
                     onChange={(e) => setNewBookingForm({ ...newBookingForm, startStr: e.target.value })}
                   >
-                    <option value="09:00 AM">09:00 AM</option>
-                    <option value="09:30 AM">09:30 AM</option>
-                    <option value="10:00 AM">10:00 AM</option>
-                    <option value="10:30 AM">10:30 AM</option>
-                    <option value="11:00 AM">11:00 AM</option>
-                    <option value="11:30 AM">11:30 AM</option>
-                    <option value="12:00 PM">12:00 PM</option>
-                    <option value="12:30 PM">12:30 PM</option>
-                    <option value="01:00 PM">01:00 PM</option>
-                    <option value="01:30 PM">01:30 PM</option>
+                    {startOptions.map((opt) => (
+                      <option key={opt} value={opt}>{opt}</option>
+                    ))}
                   </select>
                   <span className="absolute right-4 top-3 text-text-secondary pointer-events-none">
                     <ChevronDownIcon size={14} />
@@ -347,16 +513,9 @@ export default function BookingPage() {
                     className="w-full border border-border-color bg-white pl-11 pr-10 py-2.5 rounded-xl text-sm font-semibold focus:outline-none focus:border-primary-orange text-text-primary appearance-none cursor-pointer"
                     onChange={(e) => setNewBookingForm({ ...newBookingForm, endStr: e.target.value })}
                   >
-                    <option value="09:30 AM">09:30 AM</option>
-                    <option value="10:00 AM">10:00 AM</option>
-                    <option value="10:30 AM">10:30 AM</option>
-                    <option value="11:00 AM">11:00 AM</option>
-                    <option value="11:30 AM">11:30 AM</option>
-                    <option value="12:00 PM">12:00 PM</option>
-                    <option value="12:30 PM">12:30 PM</option>
-                    <option value="01:00 PM">01:00 PM</option>
-                    <option value="01:30 PM">01:30 PM</option>
-                    <option value="02:00 PM">02:00 PM</option>
+                    {filteredEndOptions.map((opt) => (
+                      <option key={opt} value={opt}>{opt}</option>
+                    ))}
                   </select>
                   <span className="absolute right-4 top-3 text-text-secondary pointer-events-none">
                     <ChevronDownIcon size={14} />

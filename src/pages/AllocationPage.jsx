@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { supabase } from '../config/supabaseClient';
 import {
   UserIcon,
   SendIcon,
@@ -11,7 +12,7 @@ import {
   BoxIcon
 } from '../components/Icons';
 
-export default function AllocationPage({ assets, setAssets, employeesList }) {
+export default function AllocationPage({ assets, setAssets }) {
   // 1. Selected Asset State - defaults to AF-0114 (id: 4) if present
   const [selectedAssetId, setSelectedAssetId] = useState(
     assets.some(a => a.id === 4) ? '4' : assets[0]?.id.toString() || ''
@@ -21,7 +22,41 @@ export default function AllocationPage({ assets, setAssets, employeesList }) {
   const [targetEmployee, setTargetEmployee] = useState('');
   const [reason, setReason] = useState('');
 
-  // 3. Allocation History State
+  // 3. Dynamic Employees List loaded from Supabase
+  const [localEmployeesList, setLocalEmployeesList] = useState([]);
+
+  // Fetch employees list live on component mount
+  useEffect(() => {
+    const fetchEmployees = async () => {
+      try {
+        const { data: emps, error: empsError } = await supabase
+          .from('employees')
+          .select('*');
+        
+        const { data: depts, error: deptsError } = await supabase
+          .from('departments')
+          .select('*');
+
+        if (emps && depts) {
+          const deptIdToName = {};
+          depts.forEach(d => {
+            deptIdToName[d.id] = d.name;
+          });
+
+          setLocalEmployeesList(emps.map(e => ({
+            id: e.id,
+            name: e.name,
+            dept: e.department_id ? (deptIdToName[e.department_id] || '—') : '—'
+          })));
+        }
+      } catch (err) {
+        console.error('Error fetching employees for allocations:', err);
+      }
+    };
+    fetchEmployees();
+  }, []);
+
+  // 4. Allocation History State
   const [historyLogs, setHistoryLogs] = useState([
     { id: 1, date: 'Mar 12', details: 'Allocated to Priya Shah - Engineering' },
     { id: 2, date: 'Jan 04', details: 'Returned by Arjun Nair - condition: good' }
@@ -49,48 +84,82 @@ export default function AllocationPage({ assets, setAssets, employeesList }) {
   const SelectedIcon = selectedAsset ? getAssetIcon(selectedAsset.type) : BoxIcon;
 
   // Handle Form Submit
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!selectedAsset) return alert('No asset selected.');
     if (!targetEmployee) return alert('Please select a recipient employee.');
     if (!reason.trim()) return alert('Please enter a transfer reason.');
 
+    const emp = localEmployeesList.find((e) => e.name === targetEmployee);
+    const targetOwnerId = emp ? emp.id : null;
+    const targetLocation = emp?.dept === 'Engineering' ? 'Bengaluru' : 'HQ Floor 2';
+
     const today = new Date();
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const formattedDate = `${months[today.getMonth()]} ${String(today.getDate()).padStart(2, '0')}`;
 
-    // Update the state of assets in global state
-    setAssets(
-      assets.map((a) => {
-        if (a.id.toString() === selectedAssetId) {
-          return {
-            ...a,
-            status: 'Allocated',
-            owner: targetEmployee,
-            location: employeesList.find(e => e.name === targetEmployee)?.dept === 'Engineering' ? 'Bengaluru' : 'HQ Floor 2'
-          };
-        }
-        return a;
-      })
-    );
-
-    // Prepend to history logs state
     const actionText = isAllocated 
       ? `Transferred from ${currentOwner} to ${targetEmployee}`
       : `Allocated to ${targetEmployee}`;
 
-    const newLog = {
-      id: Date.now(),
-      date: formattedDate,
-      details: `${actionText} - reason: ${reason}`
-    };
+    try {
+      // 1. Update status and owner in Supabase
+      const { error: assetError } = await supabase
+        .from('assets')
+        .update({
+          status: 'ALLOCATED',
+          owner_id: targetOwnerId,
+          location: targetLocation
+        })
+        .eq('id', selectedAsset.id);
 
-    setHistoryLogs([newLog, ...historyLogs]);
-    alert(`Success! Asset ${selectedAsset.tag} has been updated in the directory.`);
-    
-    // Clear form inputs
-    setReason('');
-    setTargetEmployee('');
+      if (assetError) {
+        return alert('Failed to allocate asset in database: ' + assetError.message);
+      }
+
+      // 2. Insert into allocation history logs in Supabase
+      await supabase
+        .from('allocation_history')
+        .insert([
+          {
+            asset_id: selectedAsset.id,
+            details: `${actionText} - reason: ${reason}`
+          }
+        ]);
+
+      // 3. Update local state
+      setAssets(
+        assets.map((a) => {
+          if (a.id === selectedAsset.id) {
+            return {
+              ...a,
+              status: 'Allocated',
+              owner: targetEmployee,
+              location: targetLocation
+            };
+          }
+          return a;
+        })
+      );
+
+      // Prepend to history logs state locally
+      const newLog = {
+        id: Date.now(),
+        date: formattedDate,
+        details: `${actionText} - reason: ${reason}`
+      };
+      setHistoryLogs([newLog, ...historyLogs]);
+
+      alert(`Success! Asset ${selectedAsset.tag} has been updated in the directory.`);
+      
+      // Clear form inputs
+      setReason('');
+      setTargetEmployee('');
+
+    } catch (err) {
+      console.error('Error during allocation transaction:', err);
+      alert('An unexpected error occurred during database write.');
+    }
   };
 
   return (
@@ -136,7 +205,7 @@ export default function AllocationPage({ assets, setAssets, employeesList }) {
               </div>
               <div className="flex flex-col gap-0.5">
                 <span className="text-sm font-extrabold text-alert-red-text">
-                  Already Allocated to {currentOwner} ({employeesList.find(e => e.name === currentOwner)?.dept || 'Engineering'})
+                  Already Allocated to {currentOwner} ({localEmployeesList.find(e => e.name === currentOwner)?.dept || 'Engineering'})
                 </span>
                 <span className="text-xs font-semibold text-red-700/80">
                   Direct re-allocation is blocked – submit a transfer request below.
@@ -218,7 +287,7 @@ export default function AllocationPage({ assets, setAssets, employeesList }) {
                   onChange={(e) => setTargetEmployee(e.target.value)}
                 >
                   <option value="">Select Employee...</option>
-                  {employeesList
+                  {localEmployeesList
                     .filter((e) => e.name !== currentOwner)
                     .map((emp, idx) => (
                       <option key={idx} value={emp.name}>

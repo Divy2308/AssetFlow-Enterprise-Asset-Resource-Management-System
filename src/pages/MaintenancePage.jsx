@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { supabase } from '../config/supabaseClient';
 import {
   CalendarIcon,
   InfoIcon,
@@ -15,14 +16,55 @@ import {
 } from '../components/Icons';
 
 export default function MaintenancePage({ assets = [], setAssets }) {
-  // 1. Initial State for Kanban Tasks (matching mockup)
-  const [tasks, setTasks] = useState([
-    { id: '1', tag: 'AF-0062', title: 'Projector bulb not turning on', desc: '', column: 'pending', dateText: 'Reported on 7 Jul 2026', iconType: 'bulb', iconColor: 'orange' },
-    { id: '2', tag: 'AF-003', title: 'AC unit', desc: 'noisy compressor', column: 'approved', dateText: 'Approved on 7 Jul 2026', iconType: 'ac', iconColor: 'green' },
-    { id: '3', tag: 'AF-0078', title: 'Forklift', desc: 'Tech: R Varma', column: 'technician', dateText: 'Assigned on 7 Jul 2026', iconType: 'wrench', iconColor: 'blue' },
-    { id: '4', tag: 'AF-897', title: 'Printer Jam', desc: 'parts ordered', column: 'in-progress', dateText: 'Started on 7 Jul 2026', iconType: 'printer', iconColor: 'purple' },
-    { id: '5', tag: 'AF-873', title: 'Chair repair resolved', desc: '', column: 'resolved', dateText: 'Resolved on 7 Jul 2026', iconType: 'chair', iconColor: 'green' }
-  ]);
+  // 1. Initial State for Kanban Tasks
+  const [tasks, setTasks] = useState([]);
+
+  // Load tasks on mount from Supabase
+  useEffect(() => {
+    const fetchMaintenanceTasks = async () => {
+      try {
+        const { data, error } = await supabase.from('maintenance_requests').select('*, assets(tag)');
+        if (data) {
+          setTasks(data.map(t => {
+            const lowerTitle = t.issue_details.toLowerCase();
+            let iconType = 'box';
+            let iconColor = 'orange';
+
+            if (lowerTitle.includes('bulb') || lowerTitle.includes('light') || lowerTitle.includes('projector')) {
+              iconType = 'bulb';
+              iconColor = 'orange';
+            } else if (lowerTitle.includes('ac') || lowerTitle.includes('compressor') || lowerTitle.includes('cooling')) {
+              iconType = 'ac';
+              iconColor = 'green';
+            } else if (lowerTitle.includes('print') || lowerTitle.includes('paper') || lowerTitle.includes('jam')) {
+              iconType = 'printer';
+              iconColor = 'purple';
+            } else if (lowerTitle.includes('wrench') || lowerTitle.includes('tool') || lowerTitle.includes('forklift') || lowerTitle.includes('engine')) {
+              iconType = 'wrench';
+              iconColor = 'blue';
+            } else if (lowerTitle.includes('chair') || lowerTitle.includes('furniture') || lowerTitle.includes('desk')) {
+              iconType = 'chair';
+              iconColor = 'green';
+            }
+
+            return {
+              id: t.id.toString(),
+              tag: t.assets?.tag || 'AF-0012',
+              title: t.issue_details,
+              desc: t.technician ? `Tech: ${t.technician}` : '',
+              column: t.status.toLowerCase(), // 'pending', 'approved', 'technician', 'in-progress', 'resolved'
+              dateText: `Created on ${new Date(t.created_at).toLocaleDateString()}`,
+              iconType,
+              iconColor
+            };
+          }));
+        }
+      } catch (err) {
+        console.error('Failed to load maintenance tasks:', err);
+      }
+    };
+    fetchMaintenanceTasks();
+  }, [assets]);
 
   // 2. Drag & Drop Visual State
   const [draggedOverCol, setDraggedOverCol] = useState(null);
@@ -107,7 +149,7 @@ export default function MaintenancePage({ assets = [], setAssets }) {
     setDraggedOverCol(null);
   };
 
-  const handleDrop = (e, targetColId) => {
+  const handleDrop = async (e, targetColId) => {
     e.preventDefault();
     setDraggedOverCol(null);
     const taskId = e.dataTransfer.getData('text/plain');
@@ -124,13 +166,43 @@ export default function MaintenancePage({ assets = [], setAssets }) {
     else if (targetColId === 'in-progress') dateText = `Started on ${today}`;
     else if (targetColId === 'resolved') dateText = `Resolved on ${today}`;
 
-    // Update tasks in state
-    setTasks(
-      tasks.map(t => t.id === taskId ? { ...t, column: targetColId, dateText } : t)
-    );
+    try {
+      // 1. Update request status in Supabase
+      const { error } = await supabase
+        .from('maintenance_requests')
+        .update({ status: targetColId.toUpperCase() })
+        .eq('id', taskId);
 
-    // Synchronize asset status
-    syncAssetStatus(task.tag, targetColId);
+      if (error) {
+        return alert('Failed to update status in database: ' + error.message);
+      }
+
+      // 2. Sync asset status in database
+      let newAssetStatus = 'AVAILABLE';
+      if (['approved', 'technician', 'in-progress'].includes(targetColId)) {
+        newAssetStatus = 'UNDER_MAINTENANCE';
+      } else if (targetColId === 'resolved') {
+        newAssetStatus = 'AVAILABLE';
+      }
+
+      const asset = assets.find(a => a.tag.toUpperCase() === task.tag.toUpperCase());
+      if (asset) {
+        await supabase
+          .from('assets')
+          .update({ status: newAssetStatus })
+          .eq('tag', task.tag.toUpperCase());
+      }
+
+      // 3. Update tasks state
+      setTasks(
+        tasks.map(t => t.id === taskId ? { ...t, column: targetColId, dateText } : t)
+      );
+
+      // Synchronize asset status locally
+      syncAssetStatus(task.tag, targetColId);
+    } catch (err) {
+      console.error('Error dropping task:', err);
+    }
   };
 
   // Click handler to open create task Modal
@@ -146,7 +218,7 @@ export default function MaintenancePage({ assets = [], setAssets }) {
   };
 
   // Submit new task handler
-  const handleFormSubmit = (e) => {
+  const handleFormSubmit = async (e) => {
     e.preventDefault();
     const { tag, title, desc } = taskForm;
     if (!tag || !title) return alert('Please fill in Asset Tag and Issue title.');
@@ -179,22 +251,49 @@ export default function MaintenancePage({ assets = [], setAssets }) {
     else if (targetColumn === 'in-progress') dateText = `Started on ${today}`;
     else if (targetColumn === 'resolved') dateText = `Resolved on ${today}`;
 
-    const newTask = {
-      id: Date.now().toString(),
-      tag: tag.toUpperCase(),
-      title,
-      desc,
-      column: targetColumn,
-      dateText,
-      iconType,
-      iconColor
-    };
+    try {
+      const asset = assets.find(a => a.tag.toUpperCase() === tag.toUpperCase());
+      const assetId = asset ? asset.id : 1;
 
-    setTasks([...tasks, newTask]);
-    setShowAddModal(false);
+      const { data, error } = await supabase
+        .from('maintenance_requests')
+        .insert([
+          {
+            asset_id: assetId,
+            reporter_id: 1, // default employee
+            issue_details: title,
+            priority: 'MEDIUM',
+            status: targetColumn.toUpperCase(),
+            technician: desc || null
+          }
+        ])
+        .select();
 
-    // Sync Asset Status
-    syncAssetStatus(tag, targetColumn);
+      if (error) {
+        return alert('Failed to create maintenance request: ' + error.message);
+      }
+
+      if (data && data[0]) {
+        const newTask = {
+          id: data[0].id.toString(),
+          tag: tag.toUpperCase(),
+          title,
+          desc,
+          column: targetColumn,
+          dateText,
+          iconType,
+          iconColor
+        };
+
+        setTasks([...tasks, newTask]);
+        setShowAddModal(false);
+
+        // Sync Asset Status
+        syncAssetStatus(tag, targetColumn);
+      }
+    } catch (err) {
+      console.error('Error submitting maintenance task:', err);
+    }
   };
 
   return (

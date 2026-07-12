@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import DashboardPage from './pages/DashboardPage';
@@ -12,64 +13,160 @@ import AuditPage from './pages/AuditPage';
 import ReportsPage from './pages/ReportsPage';
 import NotificationsPage from './pages/NotificationsPage';
 import LoginPage from './pages/LoginPage';
+import LearnMorePage from './pages/LearnMorePage';
+import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
+import TermsPage from './pages/TermsPage';
+import { supabase } from './config/supabaseClient';
 
 // List of tabs and their titles for dynamic header updates
 const TAB_LABELS = {
-  'dashboard': 'Screen 2', // Default title as displayed in mockup
-  'org-setup': 'Screen 3  Organization setup (Admin only)',
-  'assets': 'Screen 4  Asset registrations and directory',
-  'allocation': 'Screen 5  Asset allocation & Transfer (the double-allocation block in action)',
-  'booking': 'Screen 6  Resource booking',
-  'maintenance': 'Screen 7  Maintenance Management',
-  'audit': 'Screen 8  Asset Audit',
-  'reports': 'Screen 9  Reports & Analytics',
-  'notifications': 'Screen 10  Activity Logs & Notifications'
+  '/': 'Dashboard Overview',
+  '/org-setup': 'Organization Setup',
+  '/asset': 'Asset Registry & Directory',
+  '/allocation': 'Asset Allocation & Transfers',
+  '/booking': 'Resource Schedule & Bookings',
+  '/maintenance': 'Maintenance Ticket Management',
+  '/audit': 'Asset Verification Audits',
+  '/reports': 'Reports & Analytics',
+  '/notifications': 'Activity Logs & Alerts',
+  '/learn-more': 'User Guide & Modules',
+  '/privacy': 'Privacy Policy',
+  '/terms': 'Terms of Service'
 };
 
 function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [session, setSession] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
+  
+  const navigate = useNavigate();
+  const location = useLocation();
+  
+  const activeTab = location.pathname;
 
-  const [notifications, setNotifications] = useState([
-    { id: 1, tag: 'AF-0014', category: 'approvals', text: 'Laptop AF-0014 assigned to Priya Shah', time: '2m ago', isUnread: true, type: 'laptop', dotColor: 'orange', bgColor: 'orange' },
-    { id: 2, tag: 'AF-0055', category: 'approvals', text: 'Maintenance request AF-0055 approved', time: '18m ago', isUnread: true, type: 'wrench', dotColor: 'green', bgColor: 'green' },
-    { id: 3, tag: 'Room B2', category: 'bookings', text: 'Booking confirmed : Room B2 : 2:00 to 3:00 PM', subtext: 'Room B2 • 2:00 PM – 3:00 PM', time: '1h ago', isUnread: true, type: 'calendar', dotColor: 'blue', bgColor: 'blue' },
-    { id: 4, tag: 'AF-0033', category: 'transfers', text: 'Transfer approved : AF-0033 to facilities dept', time: '3h ago', isUnread: false, type: 'transfer', dotColor: 'purple', bgColor: 'purple' },
-    { id: 5, tag: 'AF-0021', category: 'alerts', text: 'Overdue return : AF-0021 was due 3 days ago', time: '1d ago', isUnread: false, type: 'clock', dotColor: 'yellow', bgColor: 'yellow' },
-    { id: 6, tag: 'AF-0088', category: 'alerts', text: 'Audit discrepancy flagged : AF-0088 damaged', time: '2d ago', isUnread: false, type: 'shield', dotColor: 'red', bgColor: 'red' }
-  ]);
+  const [notifications, setNotifications] = useState([]);
+  const [assets, setAssets] = useState([]);
+
+  // 1. Listen for Supabase Auth state changes
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // 2. Fetch logged-in user profile from employees table
+  useEffect(() => {
+    if (!session) {
+      setCurrentUser(null);
+      return;
+    }
+
+    const fetchProfile = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('employees')
+          .select('*, departments(name)')
+          .eq('email', session.user.email)
+          .single();
+
+        if (!error && data) {
+          setCurrentUser({
+            id: data.id,
+            name: data.name,
+            email: data.email,
+            role: data.role,
+            department: data.departments?.name || '—'
+          });
+        } else {
+          // Fallback profile if user profile is missing in the database table
+          setCurrentUser({
+            id: 999,
+            name: session.user.email.split('@')[0],
+            email: session.user.email,
+            role: 'EMPLOYEE',
+            department: '—'
+          });
+        }
+      } catch (err) {
+        console.error('Error fetching employee profile:', err);
+      }
+    };
+    fetchProfile();
+  }, [session]);
+
+  // 3. Load global data on mounting/active session
+  useEffect(() => {
+    if (!session) return;
+
+    // Load assets
+    const fetchAssets = async () => {
+      try {
+        const { data, error } = await supabase.from('assets').select('*, employees(name)');
+        if (!error && data) {
+          setAssets(data.map(a => ({
+            id: a.id,
+            tag: a.tag,
+            name: a.name,
+            category: a.category_name,
+            status: a.status === 'AVAILABLE' ? 'Available' : a.status === 'ALLOCATED' ? 'Allocated' : 'Maintenance',
+            location: a.location,
+            type: a.type || 'other',
+            owner: a.employees?.name || '—'
+          })));
+        }
+      } catch (err) {
+        console.error('Error loading assets:', err);
+      }
+    };
+
+    // Load notifications
+    const fetchNotifications = async () => {
+      try {
+        const { data, error } = await supabase.from('notifications').select('*').order('id', { ascending: false });
+        if (!error && data) {
+          setNotifications(data.map(n => ({
+            id: n.id,
+            tag: n.tag,
+            category: n.category,
+            text: n.text,
+            time: n.time_label,
+            isUnread: n.is_unread,
+            type: n.type,
+            dotColor: n.dot_color,
+            bgColor: n.bg_color
+          })));
+        }
+      } catch (err) {
+        console.error('Error loading notifications:', err);
+      }
+    };
+
+    fetchAssets();
+    fetchNotifications();
+  }, [session]);
 
   const unreadCount = notifications.filter(n => n.isUnread).length;
 
-  const [assets, setAssets] = useState([
-    { id: 1, tag: 'AF-0012', name: 'Dell Laptop', category: 'Electronics', status: 'Allocated', location: 'Bengaluru', type: 'laptop', owner: 'Priya' },
-    { id: 2, tag: 'AF-0062', name: 'Projector', category: 'Electronics', status: 'Maintenance', location: 'HQ Floor 2', type: 'projector', owner: '—' },
-    { id: 3, tag: 'AF-0201', name: 'Office Chair', category: 'Furniture', status: 'Available', location: 'Warehouse', type: 'chair', owner: '—' },
-    { id: 4, tag: 'AF-0114', name: 'Dell laptop', category: 'Electronics', status: 'Allocated', location: 'Bengaluru', type: 'laptop', owner: 'Priya Shah' }
-  ]);
-
-  const employeesList = [
-    { name: 'Priya Shah', dept: 'Engineering' },
-    { name: 'aditi rao', dept: 'Engineering' },
-    { name: 'rohan mehta', dept: 'Facilities' },
-    { name: 'sana iqbal', dept: 'Human Resources (HR)' },
-    { name: 'Manya Anand', dept: 'Facilities' },
-    { name: 'Elroy M', dept: 'Engineering' },
-    { name: 'Chintan Varma', dept: 'Human Resources (HR)' },
-    { name: 'Minty Fish', dept: 'Human Resources (HR)' },
-    { name: 'Cool Emu', dept: 'Facilities' }
-  ];
-
   const currentTitle = TAB_LABELS[activeTab] || 'AssetFlow';
 
-  if (!isLoggedIn) {
-    return <LoginPage onLogin={() => setIsLoggedIn(true)} />;
+  if (!session) {
+    return <LoginPage onLogin={() => {}} />;
   }
 
   return (
     <div className="flex bg-bg-gray min-h-screen">
       {/* Left Sidebar */}
-      <Sidebar activeTab={activeTab} onTabChange={setActiveTab} unreadCount={unreadCount} />
+      <Sidebar 
+        activeTab={activeTab} 
+        onTabChange={(path) => navigate(path)} 
+        unreadCount={unreadCount} 
+        userRole={currentUser ? currentUser.role : 'EMPLOYEE'}
+      />
 
       {/* Right Scrollable Content Frame */}
       <main className="flex-grow overflow-y-auto p-8 flex flex-col justify-between">
@@ -77,42 +174,52 @@ function App() {
         <Header 
           title={currentTitle} 
           unreadCount={unreadCount} 
-          onNotificationClick={() => setActiveTab('notifications')} 
-          onLogout={() => setIsLoggedIn(false)}
+          onNotificationClick={() => navigate('/notifications')} 
+          onLogout={async () => {
+            await supabase.auth.signOut();
+          }}
+          userName={currentUser ? currentUser.name : 'User'}
         />
 
-        {/* Dynamic Inner Page Component */}
+        {/* Dynamic Inner Page Component via React Router Routes */}
         <div className="flex-grow mt-2">
-          {activeTab === 'dashboard' ? (
-            <DashboardPage />
-          ) : activeTab === 'org-setup' ? (
-            <OrgSetupPage />
-          ) : activeTab === 'assets' ? (
-            <AssetsPage assets={assets} setAssets={setAssets} />
-          ) : activeTab === 'allocation' ? (
-            <AllocationPage assets={assets} setAssets={setAssets} employeesList={employeesList} />
-          ) : activeTab === 'booking' ? (
-            <BookingPage />
-          ) : activeTab === 'maintenance' ? (
-            <MaintenancePage assets={assets} setAssets={setAssets} />
-          ) : activeTab === 'audit' ? (
-            <AuditPage assets={assets} setAssets={setAssets} />
-          ) : activeTab === 'reports' ? (
-            <ReportsPage />
-          ) : activeTab === 'notifications' ? (
-            <NotificationsPage notifications={notifications} setNotifications={setNotifications} />
-          ) : (
-            <PlaceholderPage title={currentTitle} id={activeTab} />
-          )}
+          <Routes>
+            <Route path="/" element={<DashboardPage />} />
+            
+            <Route 
+              path="/org-setup" 
+              element={
+                currentUser?.role === 'ADMIN' ? (
+                  <OrgSetupPage />
+                ) : (
+                  <Navigate to="/" replace />
+                )
+              } 
+            />
+
+            <Route path="/asset" element={<AssetsPage assets={assets} setAssets={setAssets} />} />
+            <Route path="/allocation" element={<AllocationPage assets={assets} setAssets={setAssets} />} />
+            <Route path="/booking" element={<BookingPage />} />
+            <Route path="/maintenance" element={<MaintenancePage assets={assets} setAssets={setAssets} />} />
+            <Route path="/audit" element={<AuditPage assets={assets} setAssets={setAssets} />} />
+            <Route path="/reports" element={<ReportsPage />} />
+            <Route path="/notifications" element={<NotificationsPage notifications={notifications} setNotifications={setNotifications} />} />
+            <Route path="/learn-more" element={<LearnMorePage />} />
+            <Route path="/privacy" element={<PrivacyPolicyPage />} />
+            <Route path="/terms" element={<TermsPage />} />
+            
+            {/* Fallback 404 Route redirecting to Dashboard */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
         </div>
 
         {/* Footer */}
         <footer className="flex justify-between items-center text-xs font-semibold text-text-muted mt-12 pt-6 border-t border-border-color">
           <div>&copy; 2025 AssetFlow. All rights reserved.</div>
           <div className="flex gap-4">
-            <a href="#privacy" className="hover:text-text-secondary transition-all">Privacy Policy</a>
+            <button onClick={() => navigate('/privacy')} className="hover:text-text-secondary transition-all cursor-pointer">Privacy Policy</button>
             <span className="opacity-30">|</span>
-            <a href="#terms" className="hover:text-text-secondary transition-all">Terms of Service</a>
+            <button onClick={() => navigate('/terms')} className="hover:text-text-secondary transition-all cursor-pointer">Terms of Service</button>
           </div>
         </footer>
       </main>
