@@ -12,6 +12,8 @@ import {
   MoreVerticalIcon,
   InfoIcon
 } from '../components/Icons';
+import RequireRole from '../components/RequireRole';
+import { ROLES } from '../utils/permissions';
 
 export default function AssetsPage({ assets, setAssets }) {
   // 1. Filters & Search State
@@ -257,12 +259,14 @@ export default function AssetsPage({ assets, setAssets }) {
             onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
           />
         </div>
-        <button
-          className="bg-primary-orange hover:bg-primary-orange-hover text-white text-sm font-extrabold py-3 px-6 rounded-xl transition shadow-sm cursor-pointer"
-          onClick={() => setShowRegisterModal(true)}
-        >
-          + Register Asset
-        </button>
+        <RequireRole allow={[ROLES.ADMIN, ROLES.ASSET_MANAGER]}>
+          <button
+            className="bg-primary-orange hover:bg-primary-orange-hover text-white text-sm font-extrabold py-3 px-6 rounded-xl transition shadow-sm cursor-pointer"
+            onClick={() => setShowRegisterModal(true)}
+          >
+            + Register Asset
+          </button>
+        </RequireRole>
       </div>
 
       {/* 2. Filters Grid Row */}
@@ -390,32 +394,36 @@ export default function AssetsPage({ assets, setAssets }) {
                     {/* Location */}
                     <td className="p-4 text-sm font-medium text-text-primary">{asset.location}</td>
                     
-                    {/* Actions Dots dropdown */}
+                    {/* Actions Dots dropdown — only shown to admin/asset_manager */}
                     <td className="p-4 text-sm font-medium text-text-primary">
-                      <div className="relative" ref={activeDropdownRow === asset.id ? dropdownRef : null}>
-                        <button
-                          className="w-8 h-8 rounded-lg text-text-secondary hover:bg-bg-gray hover:text-text-primary flex items-center justify-center transition cursor-pointer mx-auto"
-                          onClick={() => setActiveDropdownRow(activeDropdownRow === asset.id ? null : asset.id)}
-                        >
-                          <MoreVerticalIcon size={16} />
-                        </button>
-                        {activeDropdownRow === asset.id && (
-                          <div className="absolute right-0 mt-1 w-40 bg-white border border-border-color rounded-xl shadow-lg z-20 py-1">
-                            <button 
-                              className="w-full text-left px-4 py-2.5 text-xs font-bold text-text-secondary hover:bg-bg-gray hover:text-text-primary transition"
-                              onClick={() => handleCycleStatus(asset.id)}
-                            >
-                              Cycle Status
-                            </button>
-                            <button 
-                              className="w-full text-left px-4 py-2.5 text-xs font-bold text-alert-red-text hover:bg-red-50 transition"
-                              onClick={() => handleDeleteAsset(asset.id)}
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        )}
-                      </div>
+                      <RequireRole allow={[ROLES.ADMIN, ROLES.ASSET_MANAGER]}>
+                        <div className="relative" ref={activeDropdownRow === asset.id ? dropdownRef : null}>
+                          <button
+                            className="w-8 h-8 rounded-lg text-text-secondary hover:bg-bg-gray hover:text-text-primary flex items-center justify-center transition cursor-pointer mx-auto"
+                            onClick={() => setActiveDropdownRow(activeDropdownRow === asset.id ? null : asset.id)}
+                          >
+                            <MoreVerticalIcon size={16} />
+                          </button>
+                          {activeDropdownRow === asset.id && (
+                            <div className="absolute right-0 mt-1 w-40 bg-white border border-border-color rounded-xl shadow-lg z-20 py-1">
+                              <button 
+                                className="w-full text-left px-4 py-2.5 text-xs font-bold text-text-secondary hover:bg-bg-gray hover:text-text-primary transition"
+                                onClick={() => handleCycleStatus(asset.id)}
+                              >
+                                Cycle Status
+                              </button>
+                              <RequireRole allow={[ROLES.ADMIN]}>
+                                <button 
+                                  className="w-full text-left px-4 py-2.5 text-xs font-bold text-alert-red-text hover:bg-red-50 transition"
+                                  onClick={() => handleDeleteAsset(asset.id)}
+                                >
+                                  Delete
+                                </button>
+                              </RequireRole>
+                            </div>
+                          )}
+                        </div>
+                      </RequireRole>
                     </td>
                   </tr>
                 );

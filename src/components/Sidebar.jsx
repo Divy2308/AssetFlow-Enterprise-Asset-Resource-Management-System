@@ -11,20 +11,37 @@ import {
   BellIcon
 } from './Icons';
 import promoImg from '../assets/sidebar_promo.jpg';
+import { useUserRole } from '../context/RoleContext';
+import { hasPermission } from '../utils/permissions';
 
+// menuItems: each entry declares a `permission` key (from permissions.js)
+// that must be true for the current role to see the item.
+// Items without a `permission` key are visible to all authenticated users.
 const menuItems = [
-  { id: 'dashboard', label: 'Dashboard', Icon: BoxIcon },
-  { id: 'org-setup', label: 'Organization setup', Icon: OrgSetupIcon },
-  { id: 'assets', label: 'Assets', Icon: AssetsIcon },
-  { id: 'allocation', label: 'Allocation & Transfer', Icon: TransferIcon },
-  { id: 'booking', label: 'Resource Booking', Icon: CalendarIcon },
-  { id: 'maintenance', label: 'Maintenance', Icon: WrenchIcon },
-  { id: 'audit', label: 'Audit', Icon: ShieldIcon },
-  { id: 'reports', label: 'Reports', Icon: ReportsIcon },
-  { id: 'notifications', label: 'Notifications', Icon: BellIcon }
+  { id: 'dashboard',      label: 'Dashboard',            Icon: BoxIcon       },
+  { id: 'org-setup',      label: 'Organization setup',   Icon: OrgSetupIcon,  permission: 'nav_org_setup'  },
+  { id: 'assets',         label: 'Assets',               Icon: AssetsIcon,    permission: 'nav_assets'     },
+  { id: 'allocation',     label: 'Allocation & Transfer', Icon: TransferIcon,  permission: 'nav_allocation' },
+  { id: 'booking',        label: 'Resource Booking',      Icon: CalendarIcon,  permission: 'nav_booking'    },
+  { id: 'maintenance',    label: 'Maintenance',           Icon: WrenchIcon,    permission: 'nav_maintenance' },
+  { id: 'audit',          label: 'Audit',                 Icon: ShieldIcon,    permission: 'nav_audit'      },
+  { id: 'reports',        label: 'Reports',               Icon: ReportsIcon,   permission: 'nav_reports'    },
+  { id: 'notifications',  label: 'Notifications',         Icon: BellIcon,      permission: 'nav_notifications' },
 ];
 
-export default function Sidebar({ activeTab, onTabChange, unreadCount = 0, userRole = 'EMPLOYEE' }) {
+export default function Sidebar({ activeTab, onTabChange, unreadCount = 0 }) {
+  // Role comes from context — no prop drilling needed
+  const { role, loading } = useUserRole();
+
+  // Filter menu items based on the current user's role.
+  // While role is loading, show only items without a permission requirement
+  // (dashboard) to avoid a flash of a full menu before filtering kicks in.
+  const visibleItems = menuItems.filter((item) => {
+    if (!item.permission) return true;                  // always visible
+    if (loading) return false;                          // hide gated items while loading
+    return hasPermission(role, item.permission);
+  });
+
   return (
     <aside className="w-64 bg-white border-r border-border-color flex flex-col justify-between p-6 shrink-0 h-screen sticky top-0">
       <div>
@@ -39,12 +56,7 @@ export default function Sidebar({ activeTab, onTabChange, unreadCount = 0, userR
         {/* Navigation Items */}
         <nav>
           <ul className="flex flex-col gap-1 p-0 m-0 list-none">
-            {menuItems
-              .filter((item) => {
-                if (item.id === 'org-setup' && userRole !== 'ADMIN') return false;
-                return true;
-              })
-              .map((item) => {
+            {visibleItems.map((item) => {
               const isInterfaceActive = activeTab === item.id;
               return (
                 <li key={item.id}>
