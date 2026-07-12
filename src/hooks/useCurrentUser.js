@@ -111,7 +111,7 @@ export function useCurrentUser() {
           });
         } else {
           setState({
-            role:         data.role || ROLES.EMPLOYEE,
+            role:         (data.role || ROLES.EMPLOYEE).toLowerCase(),
             employeeId:   data.id,
             departmentId: data.department_id,
             name:         data.name,

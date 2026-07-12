@@ -85,14 +85,53 @@ function AppShell({ notifications, setNotifications, assets, setAssets }) {
           <Routes>
             <Route path="/" element={<DashboardPage />} />
             
-            <Route path="/org-setup" element={<OrgSetupPage />} />
+            <Route 
+              path="/org-setup" 
+              element={
+                <RequireRole allow={[ROLES.ADMIN]} fallback={<AccessDeniedBlock message="Access Denied: Admin privileges required to manage organization setup." />}>
+                  <OrgSetupPage />
+                </RequireRole>
+              } 
+            />
 
-            <Route path="/asset" element={<AssetsPage assets={assets} setAssets={setAssets} />} />
-            <Route path="/allocation" element={<AllocationPage assets={assets} setAssets={setAssets} />} />
+            <Route 
+              path="/asset" 
+              element={
+                <RequireRole allow={[ROLES.ADMIN, ROLES.ASSET_MANAGER]} fallback={<AccessDeniedBlock message="Access Denied: Admin or Asset Manager permissions required to access the assets directory." />}>
+                  <AssetsPage assets={assets} setAssets={setAssets} />
+                </RequireRole>
+              } 
+            />
+            
+            <Route 
+              path="/allocation" 
+              element={
+                <RequireRole allow={[ROLES.ADMIN, ROLES.ASSET_MANAGER, ROLES.DEPARTMENT_HEAD]} fallback={<AccessDeniedBlock message="Access Denied: Admin, Asset Manager, or Department Head permissions required to perform allocations." />}>
+                  <AllocationPage assets={assets} setAssets={setAssets} />
+                </RequireRole>
+              } 
+            />
+            
             <Route path="/booking" element={<BookingPage />} />
             <Route path="/maintenance" element={<MaintenancePage assets={assets} setAssets={setAssets} />} />
-            <Route path="/audit" element={<AuditPage assets={assets} setAssets={setAssets} />} />
-            <Route path="/reports" element={<ReportsPage />} />
+            
+            <Route 
+              path="/audit" 
+              element={
+                <RequireRole allow={[ROLES.ADMIN]} fallback={<AccessDeniedBlock message="Access Denied: Admin privileges required to manage audit cycles." />}>
+                  <AuditPage assets={assets} setAssets={setAssets} />
+                </RequireRole>
+              } 
+            />
+            
+            <Route 
+              path="/reports" 
+              element={
+                <RequireRole allow={[ROLES.ADMIN, ROLES.ASSET_MANAGER, ROLES.DEPARTMENT_HEAD]} fallback={<AccessDeniedBlock message="Access Denied: Admin, Asset Manager, or Department Head permissions required to view reports." />}>
+                  <ReportsPage />
+                </RequireRole>
+              } 
+            />
             <Route path="/notifications" element={<NotificationsPage notifications={notifications} setNotifications={setNotifications} />} />
             <Route path="/learn-more" element={<LearnMorePage />} />
             <Route path="/privacy" element={<PrivacyPolicyPage />} />
