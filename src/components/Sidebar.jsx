@@ -24,7 +24,7 @@ const menuItems = [
   { id: 'notifications', label: 'Notifications', Icon: BellIcon }
 ];
 
-export default function Sidebar({ activeTab, onTabChange }) {
+export default function Sidebar({ activeTab, onTabChange, unreadCount = 0 }) {
   return (
     <aside className="sidebar">
       <div>
@@ -46,11 +46,33 @@ export default function Sidebar({ activeTab, onTabChange }) {
                   <button
                     onClick={() => onTabChange(item.id)}
                     className={`nav-item-btn ${isInterfaceActive ? 'active' : ''}`}
+                    style={{ width: '100%', display: 'flex', alignItems: 'center' }}
                   >
                     <span className="nav-icon">
                       <item.Icon size={18} />
                     </span>
-                    {item.label}
+                    <span style={{ flexGrow: 1, textAlign: 'left' }}>
+                      {item.label}
+                    </span>
+                    {item.id === 'notifications' && unreadCount > 0 && (
+                      <span
+                        style={{
+                          backgroundColor: 'var(--primary-orange)',
+                          color: 'white',
+                          fontSize: '10px',
+                          fontWeight: '800',
+                          borderRadius: '50%',
+                          width: '18px',
+                          height: '18px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0
+                        }}
+                      >
+                        {unreadCount}
+                      </span>
+                    )}
                   </button>
                 </li>
               );
