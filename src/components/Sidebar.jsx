@@ -13,15 +13,15 @@ import {
 import promoImg from '../assets/sidebar_promo.jpg';
 
 const menuItems = [
-  { id: 'dashboard', label: 'Dashboard', Icon: BoxIcon },
-  { id: 'org-setup', label: 'Organization setup', Icon: OrgSetupIcon },
-  { id: 'assets', label: 'Assets', Icon: AssetsIcon },
-  { id: 'allocation', label: 'Allocation & Transfer', Icon: TransferIcon },
-  { id: 'booking', label: 'Resource Booking', Icon: CalendarIcon },
-  { id: 'maintenance', label: 'Maintenance', Icon: WrenchIcon },
-  { id: 'audit', label: 'Audit', Icon: ShieldIcon },
-  { id: 'reports', label: 'Reports', Icon: ReportsIcon },
-  { id: 'notifications', label: 'Notifications', Icon: BellIcon }
+  { id: '/', label: 'Dashboard', Icon: BoxIcon },
+  { id: '/org-setup', label: 'Organization setup', Icon: OrgSetupIcon },
+  { id: '/asset', label: 'Assets', Icon: AssetsIcon },
+  { id: '/allocation', label: 'Allocation & Transfer', Icon: TransferIcon },
+  { id: '/booking', label: 'Resource Booking', Icon: CalendarIcon },
+  { id: '/maintenance', label: 'Maintenance', Icon: WrenchIcon },
+  { id: '/audit', label: 'Audit', Icon: ShieldIcon },
+  { id: '/reports', label: 'Reports', Icon: ReportsIcon },
+  { id: '/notifications', label: 'Notifications', Icon: BellIcon }
 ];
 
 export default function Sidebar({ activeTab, onTabChange, unreadCount = 0, userRole = 'EMPLOYEE' }) {
@@ -41,7 +41,7 @@ export default function Sidebar({ activeTab, onTabChange, unreadCount = 0, userR
           <ul className="flex flex-col gap-1 p-0 m-0 list-none">
             {menuItems
               .filter((item) => {
-                if (item.id === 'org-setup' && userRole !== 'ADMIN') return false;
+                if (item.id === '/org-setup' && userRole !== 'ADMIN') return false;
                 return true;
               })
               .map((item) => {
@@ -61,7 +61,7 @@ export default function Sidebar({ activeTab, onTabChange, unreadCount = 0, userR
                     <span className="flex-grow text-left">
                       {item.label}
                     </span>
-                    {item.id === 'notifications' && unreadCount > 0 && (
+                    {item.id === '/notifications' && unreadCount > 0 && (
                       <span className="bg-primary-orange text-white text-[10px] font-extrabold rounded-full w-5 h-5 flex items-center justify-center shrink-0 shadow-sm">
                         {unreadCount}
                       </span>
@@ -85,7 +85,7 @@ export default function Sidebar({ activeTab, onTabChange, unreadCount = 0, userR
           Manage your assets smarter and faster
         </h4>
         <button
-          onClick={() => onTabChange('learn-more')}
+          onClick={() => onTabChange('/learn-more')}
           className="w-full bg-primary-orange hover:bg-primary-orange-hover text-white text-xs font-extrabold py-2.5 px-4 rounded-xl transition-all duration-200 shadow-sm cursor-pointer"
         >
           Learn more
