@@ -14,8 +14,8 @@ import ReportsPage from './pages/ReportsPage';
 import NotificationsPage from './pages/NotificationsPage';
 import LoginPage from './pages/LoginPage';
 import LearnMorePage from './pages/LearnMorePage';
-import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
 import TermsPage from './pages/TermsPage';
+import AIChatWidget from './components/AIChatWidget';
 import { supabase } from './config/supabaseClient';
 
 // List of tabs and their titles for dynamic header updates
@@ -222,6 +222,9 @@ function App() {
             <button onClick={() => navigate('/terms')} className="hover:text-text-secondary transition-all cursor-pointer">Terms of Service</button>
           </div>
         </footer>
+
+        {/* Phase 4: Floating Natural Language AI Assistant Widget */}
+        <AIChatWidget />
       </main>
     </div>
   );
