@@ -10,6 +10,8 @@ import {
   ChevronDownIcon,
   ChevronUpIcon
 } from '../components/Icons';
+import RequireRole from '../components/RequireRole';
+import { ROLES } from '../utils/permissions';
 
 export default function AuditPage({ assets = [], setAssets }) {
   // 1. Audit Items List State (pre-populated with mock data matching Screen 8)
@@ -369,16 +371,26 @@ export default function AuditPage({ assets = [], setAssets }) {
         </div>
       )}
 
-      {/* 4. Slate Close Audit Cycle Trigger Button */}
+      {/* 4. Slate Close Audit Cycle Trigger Button — admin only */}
       <div className="pt-1">
-        <button
-          className="bg-primary-orange hover:bg-primary-orange-hover disabled:bg-primary-orange/60 text-white text-sm font-extrabold py-3 px-6 rounded-xl transition shadow-sm cursor-pointer flex items-center gap-2 disabled:cursor-not-allowed"
-          disabled={cycleClosed}
-          onClick={handleCloseCycle}
+        <RequireRole
+          allow={[ROLES.ADMIN]}
+          fallback={
+            <div className="flex items-center gap-2 bg-bg-gray border border-border-color rounded-xl px-5 py-3 text-xs font-semibold text-text-secondary w-fit">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+              Close Audit Cycle — Admin only
+            </div>
+          }
         >
-          <FileTextIcon size={16} />
-          {cycleClosed ? 'Audit Cycle Closed' : 'Close Audit Cycle'}
-        </button>
+          <button
+            className="bg-primary-orange hover:bg-primary-orange-hover disabled:bg-primary-orange/60 text-white text-sm font-extrabold py-3 px-6 rounded-xl transition shadow-sm cursor-pointer flex items-center gap-2 disabled:cursor-not-allowed"
+            disabled={cycleClosed}
+            onClick={handleCloseCycle}
+          >
+            <FileTextIcon size={16} />
+            {cycleClosed ? 'Audit Cycle Closed' : 'Close Audit Cycle'}
+          </button>
+        </RequireRole>
       </div>
 
       {/* 5. Disclaimer about Audit Cycle details banner */}

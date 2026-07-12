@@ -17,6 +17,10 @@ import LearnMorePage from './pages/LearnMorePage';
 import TermsPage from './pages/TermsPage';
 import AIChatWidget from './components/AIChatWidget';
 import { supabase } from './config/supabaseClient';
+import { RoleProvider, useUserRole } from './context/RoleContext';
+import RequireRole, { AccessDeniedBlock } from './components/RequireRole';
+import { ROLES } from './utils/permissions';
+import { hasDevSession, devLogout } from './utils/devAuth';
 
 // List of tabs and their titles for dynamic header updates
 const TAB_LABELS = {
@@ -34,129 +38,20 @@ const TAB_LABELS = {
   '/terms': 'Terms of Service'
 };
 
-function App() {
-  const [session, setSession] = useState(null);
-  const [currentUser, setCurrentUser] = useState(null);
-  
+// ──────────────────────────────────────────────
+// Inner shell — rendered after auth is confirmed.
+// Reads current user from RoleContext (no prop drilling).
+// ──────────────────────────────────────────────
+function AppShell({ notifications, setNotifications, assets, setAssets }) {
+  const { role, name, loading } = useUserRole();
+
   const navigate = useNavigate();
   const location = useLocation();
-  
+
   const activeTab = location.pathname;
 
-  const [notifications, setNotifications] = useState([]);
-  const [assets, setAssets] = useState([]);
-
-  // 1. Listen for Supabase Auth state changes
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  // 2. Fetch logged-in user profile from employees table
-  useEffect(() => {
-    if (!session) {
-      setCurrentUser(null);
-      return;
-    }
-
-    const fetchProfile = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('employees')
-          .select('*, departments(name)')
-          .eq('email', session.user.email)
-          .single();
-
-        if (!error && data) {
-          setCurrentUser({
-            id: data.id,
-            name: data.name,
-            email: data.email,
-            role: data.role,
-            department: data.departments?.name || '—'
-          });
-        } else {
-          // Fallback profile if user profile is missing in the database table
-          setCurrentUser({
-            id: 999,
-            name: session.user.email.split('@')[0],
-            email: session.user.email,
-            role: 'EMPLOYEE',
-            department: '—'
-          });
-        }
-      } catch (err) {
-        console.error('Error fetching employee profile:', err);
-      }
-    };
-    fetchProfile();
-  }, [session]);
-
-  // 3. Load global data on mounting/active session
-  useEffect(() => {
-    if (!session) return;
-
-    // Load assets
-    const fetchAssets = async () => {
-      try {
-        const { data, error } = await supabase.from('assets').select('*, employees(name)');
-        if (!error && data) {
-          setAssets(data.map(a => ({
-            id: a.id,
-            tag: a.tag,
-            name: a.name,
-            category: a.category_name,
-            status: a.status === 'AVAILABLE' ? 'Available' : a.status === 'ALLOCATED' ? 'Allocated' : 'Maintenance',
-            location: a.location,
-            type: a.type || 'other',
-            owner: a.employees?.name || '—'
-          })));
-        }
-      } catch (err) {
-        console.error('Error loading assets:', err);
-      }
-    };
-
-    // Load notifications
-    const fetchNotifications = async () => {
-      try {
-        const { data, error } = await supabase.from('notifications').select('*').order('id', { ascending: false });
-        if (!error && data) {
-          setNotifications(data.map(n => ({
-            id: n.id,
-            tag: n.tag,
-            category: n.category,
-            text: n.text,
-            time: n.time_label,
-            isUnread: n.is_unread,
-            type: n.type,
-            dotColor: n.dot_color,
-            bgColor: n.bg_color
-          })));
-        }
-      } catch (err) {
-        console.error('Error loading notifications:', err);
-      }
-    };
-
-    fetchAssets();
-    fetchNotifications();
-  }, [session]);
-
-  const unreadCount = notifications.filter(n => n.isUnread).length;
-
+  const unreadCount = notifications.filter((n) => n.isUnread).length;
   const currentTitle = TAB_LABELS[activeTab] || 'AssetFlow';
-
-  if (!session) {
-    return <LoginPage onLogin={() => {}} />;
-  }
 
   return (
     <div className="flex bg-bg-gray min-h-screen">
@@ -165,7 +60,6 @@ function App() {
         activeTab={activeTab} 
         onTabChange={(path) => navigate(path)} 
         unreadCount={unreadCount} 
-        userRole={currentUser ? currentUser.role : 'EMPLOYEE'}
       />
 
       {/* Right Scrollable Content Frame */}
@@ -176,9 +70,14 @@ function App() {
           unreadCount={unreadCount} 
           onNotificationClick={() => navigate('/notifications')} 
           onLogout={async () => {
-            await supabase.auth.signOut();
+            if (hasDevSession()) {
+              devLogout();
+              window.location.reload();
+            } else {
+              await supabase.auth.signOut();
+            }
           }}
-          userName={currentUser ? currentUser.name : 'User'}
+          userName={loading ? '…' : (name || 'User')}
         />
 
         {/* Dynamic Inner Page Component via React Router Routes */}
@@ -189,20 +88,50 @@ function App() {
             <Route 
               path="/org-setup" 
               element={
-                currentUser?.role === 'ADMIN' ? (
+                <RequireRole allow={[ROLES.ADMIN]} fallback={<AccessDeniedBlock message="Access Denied: Admin privileges required to manage organization setup." />}>
                   <OrgSetupPage />
-                ) : (
-                  <Navigate to="/" replace />
-                )
+                </RequireRole>
               } 
             />
 
-            <Route path="/asset" element={<AssetsPage assets={assets} setAssets={setAssets} />} />
-            <Route path="/allocation" element={<AllocationPage assets={assets} setAssets={setAssets} />} />
+            <Route 
+              path="/asset" 
+              element={
+                <RequireRole allow={[ROLES.ADMIN, ROLES.ASSET_MANAGER]} fallback={<AccessDeniedBlock message="Access Denied: Admin or Asset Manager permissions required to access the assets directory." />}>
+                  <AssetsPage assets={assets} setAssets={setAssets} />
+                </RequireRole>
+              } 
+            />
+            
+            <Route 
+              path="/allocation" 
+              element={
+                <RequireRole allow={[ROLES.ADMIN, ROLES.ASSET_MANAGER, ROLES.DEPARTMENT_HEAD]} fallback={<AccessDeniedBlock message="Access Denied: Admin, Asset Manager, or Department Head permissions required to perform allocations." />}>
+                  <AllocationPage assets={assets} setAssets={setAssets} />
+                </RequireRole>
+              } 
+            />
+            
             <Route path="/booking" element={<BookingPage />} />
             <Route path="/maintenance" element={<MaintenancePage assets={assets} setAssets={setAssets} />} />
-            <Route path="/audit" element={<AuditPage assets={assets} setAssets={setAssets} />} />
-            <Route path="/reports" element={<ReportsPage />} />
+            
+            <Route 
+              path="/audit" 
+              element={
+                <RequireRole allow={[ROLES.ADMIN]} fallback={<AccessDeniedBlock message="Access Denied: Admin privileges required to manage audit cycles." />}>
+                  <AuditPage assets={assets} setAssets={setAssets} />
+                </RequireRole>
+              } 
+            />
+            
+            <Route 
+              path="/reports" 
+              element={
+                <RequireRole allow={[ROLES.ADMIN, ROLES.ASSET_MANAGER, ROLES.DEPARTMENT_HEAD]} fallback={<AccessDeniedBlock message="Access Denied: Admin, Asset Manager, or Department Head permissions required to view reports." />}>
+                  <ReportsPage />
+                </RequireRole>
+              } 
+            />
             <Route path="/notifications" element={<NotificationsPage notifications={notifications} setNotifications={setNotifications} />} />
             <Route path="/learn-more" element={<LearnMorePage />} />
             <Route path="/privacy" element={<PrivacyPolicyPage />} />
@@ -227,6 +156,109 @@ function App() {
         <AIChatWidget />
       </main>
     </div>
+  );
+}
+
+// ──────────────────────────────────────────────
+// Root App — handles auth session gate
+// ──────────────────────────────────────────────
+function App() {
+  const [session, setSession] = useState(null);
+  const [sessionLoading, setSessionLoading] = useState(true);
+
+  const [notifications, setNotifications] = useState([]);
+  const [assets, setAssets] = useState([]);
+
+  // 1. Listen for Supabase Auth state changes (and check Dev Auth)
+  useEffect(() => {
+    // Check dev session first
+    if (hasDevSession()) {
+      setSession({ isDev: true }); // Mock session object
+      setSessionLoading(false);
+      return; // Skip Supabase auth listener if using dev session
+    }
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setSessionLoading(false);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      setSessionLoading(false);
+    });
+
+    return () => subscription?.unsubscribe();
+  }, []);
+
+  // 2. Load global data on active session
+  useEffect(() => {
+    if (!session) return;
+
+    // Load assets
+    const fetchAssets = async () => {
+      try {
+        const { data, error } = await supabase.from('assets').select('*, employees(name)');
+        if (!error && data) {
+          setAssets(data.map((a) => ({
+            id: a.id,
+            tag: a.tag,
+            name: a.name,
+            category: a.category_name,
+            status: a.status === 'AVAILABLE' ? 'Available' : a.status === 'ALLOCATED' ? 'Allocated' : 'Maintenance',
+            location: a.location,
+            type: a.type || 'other',
+            owner: a.employees?.name || '—'
+          })));
+        }
+      } catch (err) {
+        console.error('Error loading assets:', err);
+      }
+    };
+
+    // Load notifications
+    const fetchNotifications = async () => {
+      try {
+        const { data, error } = await supabase.from('notifications').select('*').order('id', { ascending: false });
+        if (!error && data) {
+          setNotifications(data.map((n) => ({
+            id: n.id,
+            tag: n.tag,
+            category: n.category,
+            text: n.text,
+            time: n.time_label,
+            isUnread: n.is_unread,
+            type: n.type,
+            dotColor: n.dot_color,
+            bgColor: n.bg_color
+          })));
+        }
+      } catch (err) {
+        console.error('Error loading notifications:', err);
+      }
+    };
+
+    fetchAssets();
+    fetchNotifications();
+  }, [session]);
+
+  // Show nothing while checking for a session (avoids login flash)
+  if (sessionLoading) return null;
+
+  if (!session) {
+    return <LoginPage onLogin={() => {}} />;
+  }
+
+  // Authenticated — wrap everything in RoleProvider so useUserRole() works everywhere
+  return (
+    <RoleProvider>
+      <AppShell
+        notifications={notifications}
+        setNotifications={setNotifications}
+        assets={assets}
+        setAssets={setAssets}
+      />
+    </RoleProvider>
   );
 }
 

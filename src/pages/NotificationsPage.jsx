@@ -112,7 +112,7 @@ export default function NotificationsPage({ notifications = [], setNotifications
     <div className="flex flex-col gap-6">
       
       {/* 1. Header Filter Pill Actions & Search controls */}
-      <div className="flex justify-between items-center gap-4 flex-wrap pb-1 mt-[-16px]">
+      <div className="flex justify-between items-center gap-4 flex-nowrap overflow-x-auto pb-1 mt-[-16px]">
         
         {/* Left Side: Filter Tabs */}
         <div className="flex gap-1.5 bg-bg-gray border border-border-color p-1 rounded-xl flex-wrap">
@@ -187,10 +187,10 @@ export default function NotificationsPage({ notifications = [], setNotifications
           </button>
         </div>
 
-        {/* Right Side: Search and Slider drawer button */}
-        <div className="flex items-center gap-3">
+        {/* Right Side: Search input */}
+        <div className="shrink-0">
           <div className="relative w-60 h-10">
-            <span className="absolute left-3.5 top-3.5 text-text-secondary">
+            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-secondary flex items-center">
               <SearchIcon size={15} />
             </span>
             <input
@@ -204,14 +204,6 @@ export default function NotificationsPage({ notifications = [], setNotifications
               }}
             />
           </div>
-
-          <button 
-            className="border border-primary-orange text-primary-orange hover:bg-primary-orange-light text-xs font-extrabold py-2.5 px-4.5 rounded-xl transition flex items-center gap-1.5 cursor-pointer bg-white"
-            onClick={() => alert('Search filters menu triggered')}
-          >
-            <SlidersIcon size={14} />
-            Filters
-          </button>
         </div>
       </div>
 

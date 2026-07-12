@@ -1,4 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useUserRole } from '../context/RoleContext';
+import { hasPermission } from '../utils/permissions';
 import OverviewCard from '../components/OverviewCard';
 import QuickActions from '../components/QuickActions';
 import RecentActivity from '../components/RecentActivity';
@@ -17,6 +20,8 @@ import {
 } from '../components/Icons';
 
 export default function DashboardPage() {
+  const navigate = useNavigate();
+  const { role } = useUserRole();
   const [counts, setCounts] = useState({
     available: 0,
     allocated: 0,
