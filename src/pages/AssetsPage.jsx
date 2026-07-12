@@ -13,19 +13,17 @@ import {
 } from '../components/Icons';
 
 export default function AssetsPage({ assets, setAssets }) {
-  // 1. Handled by hoisted props from App.jsx
-
-  // 2. Filters & Search State
+  // 1. Filters & Search State
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
   const [deptFilter, setDeptFilter] = useState('All');
 
-  // 3. Pagination State (Mock but fully functional)
+  // 2. Pagination State (Mock but fully functional)
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
-  // 4. Modal & Dropdown UI State
+  // 3. Modal & Dropdown UI State
   const [showRegisterModal, setShowRegisterModal] = useState(false);
   const [activeDropdownRow, setActiveDropdownRow] = useState(null);
 
@@ -69,7 +67,6 @@ export default function AssetsPage({ assets, setAssets }) {
     const matchesCategory = categoryFilter === 'All' || asset.category === categoryFilter;
     const matchesStatus = statusFilter === 'All' || asset.status === statusFilter;
     
-    // In our mock, location/dept is mapped simply, we'll allow all matches for simplicity
     return matchesSearch && matchesCategory && matchesStatus;
   });
 
@@ -160,57 +157,70 @@ export default function AssetsPage({ assets, setAssets }) {
   const renderCategoryTag = (category) => {
     const lower = category.toLowerCase();
     if (lower.includes('elect')) {
-      return <span className="category-tag electronics">Electronics</span>;
+      return (
+        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-primary-orange-light text-primary-orange border border-primary-orange-border/20">
+          Electronics
+        </span>
+      );
     } else if (lower.includes('furn')) {
-      return <span className="category-tag furniture">Furniture</span>;
+      return (
+        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-100">
+          Furniture
+        </span>
+      );
     } else {
-      return <span className="category-tag other">{category}</span>;
+      return (
+        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-bg-gray text-text-secondary border border-border-color">
+          {category}
+        </span>
+      );
     }
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+    <div className="flex flex-col gap-6">
       
       {/* 1. Search Bar & Primary Button Row */}
-      <div className="search-bar-row">
-        <div className="search-input-wrap">
-          <SearchIcon size={18} className="search-icon" />
+      <div className="flex justify-between items-center gap-4 flex-wrap">
+        <div className="relative flex-grow max-w-md h-12">
+          <SearchIcon size={18} className="absolute left-4 top-3.5 text-text-secondary" />
           <input
             type="text"
-            className="search-field"
+            className="w-full h-full border border-border-color bg-white pl-11 pr-4 rounded-xl text-sm font-semibold focus:outline-none focus:border-primary-orange text-text-primary placeholder:text-text-muted"
             placeholder="Search by tag, serial, or QR code.."
             value={searchQuery}
             onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
           />
         </div>
         <button
-          className="btn-primary-orange"
+          className="bg-primary-orange hover:bg-primary-orange-hover text-white text-sm font-extrabold py-3 px-6 rounded-xl transition shadow-sm cursor-pointer"
           onClick={() => setShowRegisterModal(true)}
-          style={{ padding: '12px 24px', borderRadius: '12px' }}
         >
           + Register Asset
         </button>
       </div>
 
       {/* 2. Filters Grid Row */}
-      <div className="filters-row">
+      <div className="flex gap-3 items-center flex-wrap">
         {/* Category Filter */}
-        <div className="filter-select-wrap">
+        <div className="relative w-44">
           <select
             value={categoryFilter}
+            className="w-full border border-border-color bg-white px-4 py-2.5 rounded-xl text-xs font-bold text-text-secondary focus:outline-none focus:border-primary-orange appearance-none pr-9 cursor-pointer"
             onChange={(e) => { setCategoryFilter(e.target.value); setCurrentPage(1); }}
           >
             <option value="All">Category: All</option>
             <option value="Electronics">Electronics</option>
             <option value="Furniture">Furniture</option>
           </select>
-          <ChevronDownIcon size={14} className="select-chevron" />
+          <ChevronDownIcon size={12} className="absolute right-3.5 top-3.5 text-text-secondary pointer-events-none" />
         </div>
 
         {/* Status Filter */}
-        <div className="filter-select-wrap">
+        <div className="relative w-44">
           <select
             value={statusFilter}
+            className="w-full border border-border-color bg-white px-4 py-2.5 rounded-xl text-xs font-bold text-text-secondary focus:outline-none focus:border-primary-orange appearance-none pr-9 cursor-pointer"
             onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
           >
             <option value="All">Status: All</option>
@@ -218,13 +228,14 @@ export default function AssetsPage({ assets, setAssets }) {
             <option value="Allocated">Allocated</option>
             <option value="Maintenance">Maintenance</option>
           </select>
-          <ChevronDownIcon size={14} className="select-chevron" />
+          <ChevronDownIcon size={12} className="absolute right-3.5 top-3.5 text-text-secondary pointer-events-none" />
         </div>
 
         {/* Department Filter */}
-        <div className="filter-select-wrap">
+        <div className="relative w-44">
           <select
             value={deptFilter}
+            className="w-full border border-border-color bg-white px-4 py-2.5 rounded-xl text-xs font-bold text-text-secondary focus:outline-none focus:border-primary-orange appearance-none pr-9 cursor-pointer"
             onChange={(e) => { setDeptFilter(e.target.value); setCurrentPage(1); }}
           >
             <option value="All">Department: All</option>
@@ -232,11 +243,11 @@ export default function AssetsPage({ assets, setAssets }) {
             <option value="Facilities">Facilities</option>
             <option value="HR">HR</option>
           </select>
-          <ChevronDownIcon size={14} className="select-chevron" />
+          <ChevronDownIcon size={12} className="absolute right-3.5 top-3.5 text-text-secondary pointer-events-none" />
         </div>
 
         {/* Reset Filters button */}
-        <button className="btn-reset" onClick={handleResetFilters}>
+        <button className="flex items-center gap-1.5 text-xs font-bold text-text-secondary hover:text-primary-orange transition cursor-pointer" onClick={handleResetFilters}>
           <svg
             xmlns="http://www.w3.org/2000/svg"
             width="14"
@@ -247,7 +258,6 @@ export default function AssetsPage({ assets, setAssets }) {
             strokeWidth="2.5"
             strokeLinecap="round"
             strokeLinejoin="round"
-            className="reset-icon"
           >
             <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
           </svg>
@@ -256,16 +266,16 @@ export default function AssetsPage({ assets, setAssets }) {
       </div>
 
       {/* 3. Assets Table Card */}
-      <div className="data-table-card" style={{ marginBottom: 0 }}>
-        <table className="data-table">
-          <thead>
+      <div className="bg-white border border-border-color rounded-2xl shadow-sm overflow-hidden">
+        <table className="w-full border-collapse text-left">
+          <thead className="bg-bg-gray border-b border-border-color">
             <tr>
-              <th style={{ width: '25%' }}>Tag / Serial</th>
-              <th style={{ width: '25%' }}>Name</th>
-              <th style={{ width: '18%' }}>Category</th>
-              <th style={{ width: '15%' }}>Status</th>
-              <th style={{ width: '12%' }}>Location</th>
-              <th style={{ width: '5%', textAlign: 'center' }}>Actions</th>
+              <th className="p-4 text-xs font-bold text-text-secondary uppercase tracking-wider" style={{ width: '25%' }}>Tag / Serial</th>
+              <th className="p-4 text-xs font-bold text-text-secondary uppercase tracking-wider" style={{ width: '25%' }}>Name</th>
+              <th className="p-4 text-xs font-bold text-text-secondary uppercase tracking-wider" style={{ width: '18%' }}>Category</th>
+              <th className="p-4 text-xs font-bold text-text-secondary uppercase tracking-wider" style={{ width: '15%' }}>Status</th>
+              <th className="p-4 text-xs font-bold text-text-secondary uppercase tracking-wider" style={{ width: '12%' }}>Location</th>
+              <th className="p-4 text-xs font-bold text-text-secondary uppercase tracking-wider w-[5%] text-center">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -273,58 +283,67 @@ export default function AssetsPage({ assets, setAssets }) {
               currentItems.map((asset) => {
                 const IconComponent = getAssetIcon(asset.type);
                 return (
-                  <tr key={asset.id}>
+                  <tr key={asset.id} className="border-b border-border-color last:border-b-0 hover:bg-bg-gray/30 transition-all">
                     {/* Tag / Serial with visual decorator */}
-                    <td>
-                      <div className="dept-cell-wrap">
-                        <div 
-                          className="dept-icon-box"
-                          style={{ backgroundColor: '#FFF4EF', color: '#FF5A1F' }}
-                        >
+                    <td className="p-4 text-sm font-medium text-text-primary">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 bg-primary-orange-light text-primary-orange">
                           <IconComponent size={18} />
                         </div>
-                        <span className="dept-name" style={{ fontWeight: '700' }}>
+                        <span className="font-extrabold text-text-primary">
                           {asset.tag}
                         </span>
                       </div>
                     </td>
                     
                     {/* Name */}
-                    <td>{asset.name}</td>
+                    <td className="p-4 text-sm font-medium text-text-primary">{asset.name}</td>
                     
                     {/* Category Tag */}
-                    <td>{renderCategoryTag(asset.category)}</td>
+                    <td className="p-4 text-sm font-medium text-text-primary">{renderCategoryTag(asset.category)}</td>
                     
                     {/* Status Pill */}
-                    <td>
-                      <span className={`status-badge ${asset.status.toLowerCase()}`}>
-                        <span className="status-dot"></span>
+                    <td className="p-4 text-sm font-medium text-text-primary">
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border ${
+                        asset.status === 'Available'
+                          ? 'bg-success-green-bg text-success-green-text border-success-green-border/30'
+                          : asset.status === 'Allocated'
+                          ? 'bg-[#EFF6FF] text-[#3B82F6] border-[#EFF6FF]'
+                          : 'bg-primary-orange-light text-primary-orange border-primary-orange-border/30'
+                      }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${
+                          asset.status === 'Available'
+                            ? 'bg-success-green-text'
+                            : asset.status === 'Allocated'
+                            ? 'bg-[#3B82F6]'
+                            : 'bg-primary-orange'
+                        }`} />
                         {asset.status}
                       </span>
                     </td>
                     
                     {/* Location */}
-                    <td>{asset.location}</td>
+                    <td className="p-4 text-sm font-medium text-text-primary">{asset.location}</td>
                     
                     {/* Actions Dots dropdown */}
-                    <td>
-                      <div className="action-menu-container" ref={activeDropdownRow === asset.id ? dropdownRef : null}>
+                    <td className="p-4 text-sm font-medium text-text-primary">
+                      <div className="relative" ref={activeDropdownRow === asset.id ? dropdownRef : null}>
                         <button
-                          className="action-dots-btn"
+                          className="w-8 h-8 rounded-lg text-text-secondary hover:bg-bg-gray hover:text-text-primary flex items-center justify-center transition cursor-pointer mx-auto"
                           onClick={() => setActiveDropdownRow(activeDropdownRow === asset.id ? null : asset.id)}
                         >
                           <MoreVerticalIcon size={16} />
                         </button>
                         {activeDropdownRow === asset.id && (
-                          <div className="action-dropdown-menu">
+                          <div className="absolute right-0 mt-1 w-40 bg-white border border-border-color rounded-xl shadow-lg z-20 py-1">
                             <button 
-                              className="action-dropdown-item"
+                              className="w-full text-left px-4 py-2.5 text-xs font-bold text-text-secondary hover:bg-bg-gray hover:text-text-primary transition"
                               onClick={() => handleCycleStatus(asset.id)}
                             >
                               Cycle Status
                             </button>
                             <button 
-                              className="action-dropdown-item danger"
+                              className="w-full text-left px-4 py-2.5 text-xs font-bold text-alert-red-text hover:bg-red-50 transition"
                               onClick={() => handleDeleteAsset(asset.id)}
                             >
                               Delete
@@ -338,7 +357,7 @@ export default function AssetsPage({ assets, setAssets }) {
               })
             ) : (
               <tr>
-                <td colSpan="6" style={{ textAlign: 'center', padding: '40px', color: 'var(--text-secondary)' }}>
+                <td colSpan="6" className="p-10 text-sm font-bold text-text-secondary text-center">
                   No assets found matching the filter criteria.
                 </td>
               </tr>
@@ -347,17 +366,17 @@ export default function AssetsPage({ assets, setAssets }) {
         </table>
 
         {/* 4. Table Pagination controls footer */}
-        <div className="pagination-row">
+        <div className="flex justify-between items-center text-xs font-bold text-text-secondary p-4 border-t border-border-color flex-wrap gap-4">
           <div>
             Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, totalItems)} of {totalItems} assets
           </div>
           
-          <div className="pagination-controls">
+          <div className="flex items-center gap-4">
             {/* Page Index lists */}
-            <ul className="pagination-pages">
+            <ul className="flex gap-1.5 list-none m-0 p-0">
               <li>
                 <button
-                  className="pagination-btn"
+                  className="w-8 h-8 rounded-lg border border-border-color flex items-center justify-center transition cursor-pointer text-xs font-extrabold text-text-secondary hover:bg-bg-gray hover:text-text-primary disabled:opacity-40 disabled:cursor-not-allowed"
                   disabled={currentPage === 1}
                   onClick={() => setCurrentPage(currentPage - 1)}
                   aria-label="Previous page"
@@ -368,7 +387,11 @@ export default function AssetsPage({ assets, setAssets }) {
               {Array.from({ length: totalPages }, (_, i) => i + 1).map((pg) => (
                 <li key={pg}>
                   <button
-                    className={`pagination-btn ${currentPage === pg ? 'active' : ''}`}
+                    className={`w-8 h-8 rounded-lg border flex items-center justify-center transition cursor-pointer text-xs font-extrabold ${
+                      currentPage === pg
+                        ? 'bg-primary-orange-light text-primary-orange border-primary-orange-border/30'
+                        : 'border-transparent hover:bg-bg-gray text-text-secondary hover:text-text-primary'
+                    }`}
                     onClick={() => setCurrentPage(pg)}
                   >
                     {pg}
@@ -377,7 +400,7 @@ export default function AssetsPage({ assets, setAssets }) {
               ))}
               <li>
                 <button
-                  className="pagination-btn"
+                  className="w-8 h-8 rounded-lg border border-border-color flex items-center justify-center transition cursor-pointer text-xs font-extrabold text-text-secondary hover:bg-bg-gray hover:text-text-primary disabled:opacity-40 disabled:cursor-not-allowed"
                   disabled={currentPage === totalPages}
                   onClick={() => setCurrentPage(currentPage + 1)}
                   aria-label="Next page"
@@ -387,10 +410,11 @@ export default function AssetsPage({ assets, setAssets }) {
               </li>
             </ul>
 
-            {/* Items Per Page dropdown (mock functionality) */}
-            <div className="pagination-select-wrap">
+            {/* Items Per Page dropdown */}
+            <div className="relative w-28">
               <select
                 value={itemsPerPage}
+                className="w-full border border-border-color bg-white px-3 py-1.5 rounded-lg text-xs font-bold text-text-primary focus:outline-none focus:border-primary-orange appearance-none pr-7 cursor-pointer"
                 onChange={(e) => {
                   setItemsPerPage(Number(e.target.value));
                   setCurrentPage(1);
@@ -400,65 +424,65 @@ export default function AssetsPage({ assets, setAssets }) {
                 <option value={20}>20 / page</option>
                 <option value={50}>50 / page</option>
               </select>
-              <ChevronDownIcon size={12} className="select-chevron" />
+              <ChevronDownIcon size={12} className="absolute right-2.5 top-2.5 text-text-secondary pointer-events-none" />
             </div>
           </div>
         </div>
       </div>
 
       {/* 5. Bottom Disclaimer Alert Info Box */}
-      <div className="info-banner">
-        <div className="info-banner-icon">
+      <div className="bg-primary-orange-light border border-primary-orange-border/20 rounded-2xl p-4 flex items-center gap-3">
+        <div className="text-primary-orange flex items-center shrink-0">
           <InfoIcon size={20} strokeWidth={2.4} />
         </div>
-        <p className="info-banner-text">
+        <p className="text-xs font-semibold text-primary-orange leading-relaxed m-0">
           Editing an asset here also drives the picklist in Screen 5 (Allocation & Transfer).
         </p>
       </div>
 
       {/* 6. Register Asset Modal Dialogue */}
       {showRegisterModal && (
-        <div className="modal-backdrop">
-          <form className="modal-card" onSubmit={handleRegisterSubmit}>
-            <div className="modal-header">
-              <h3 className="modal-title">Register Asset</h3>
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+          <form className="bg-white border border-border-color rounded-2xl shadow-xl max-w-md w-full overflow-hidden flex flex-col gap-5 p-6" onSubmit={handleRegisterSubmit}>
+            <div className="flex justify-between items-center pb-3 border-b border-border-color">
+              <h3 className="font-heading text-base font-extrabold text-text-primary">Register Asset</h3>
               <button 
                 type="button" 
-                className="modal-close-btn"
+                className="text-text-secondary hover:text-text-primary text-xl font-bold transition cursor-pointer"
                 onClick={() => setShowRegisterModal(false)}
               >
                 &times;
               </button>
             </div>
 
-            <div className="form-group">
-              <label className="form-label">Asset Name</label>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-bold text-text-secondary uppercase tracking-wider">Asset Name</label>
               <input
                 type="text"
                 required
                 placeholder="e.g. MacBook Pro, Sony Projector"
-                className="form-input"
+                className="border border-border-color rounded-xl px-4 py-2.5 bg-white text-sm focus:outline-none focus:border-primary-orange text-text-primary font-medium"
                 value={registerForm.name}
                 onChange={(e) => setRegisterForm({ ...registerForm, name: e.target.value })}
               />
             </div>
 
-            <div className="form-group">
-              <label className="form-label">Tag / Serial Number</label>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-bold text-text-secondary uppercase tracking-wider">Tag / Serial Number</label>
               <input
                 type="text"
                 required
                 placeholder="e.g. AF-0943"
-                className="form-input"
+                className="border border-border-color rounded-xl px-4 py-2.5 bg-white text-sm focus:outline-none focus:border-primary-orange text-text-primary font-medium"
                 value={registerForm.tag}
                 onChange={(e) => setRegisterForm({ ...registerForm, tag: e.target.value })}
               />
             </div>
 
-            <div className="form-group">
-              <label className="form-label">Category</label>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-bold text-text-secondary uppercase tracking-wider">Category</label>
               <select
-                className="form-select"
+                className="border border-border-color rounded-xl px-4 py-2.5 bg-white text-sm focus:outline-none focus:border-primary-orange text-text-primary font-medium"
                 value={registerForm.category}
                 onChange={(e) => setRegisterForm({ ...registerForm, category: e.target.value })}
               >
@@ -468,10 +492,10 @@ export default function AssetsPage({ assets, setAssets }) {
               </select>
             </div>
 
-            <div className="form-group">
-              <label className="form-label">Initial Status</label>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-bold text-text-secondary uppercase tracking-wider">Initial Status</label>
               <select
-                className="form-select"
+                className="border border-border-color rounded-xl px-4 py-2.5 bg-white text-sm focus:outline-none focus:border-primary-orange text-text-primary font-medium"
                 value={registerForm.status}
                 onChange={(e) => setRegisterForm({ ...registerForm, status: e.target.value })}
               >
@@ -481,27 +505,27 @@ export default function AssetsPage({ assets, setAssets }) {
               </select>
             </div>
 
-            <div className="form-group">
-              <label className="form-label">Location</label>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-bold text-text-secondary uppercase tracking-wider">Location</label>
               <input
                 type="text"
                 required
                 placeholder="e.g. Bengaluru, HQ Floor 1"
-                className="form-input"
+                className="border border-border-color rounded-xl px-4 py-2.5 bg-white text-sm focus:outline-none focus:border-primary-orange text-text-primary font-medium"
                 value={registerForm.location}
                 onChange={(e) => setRegisterForm({ ...registerForm, location: e.target.value })}
               />
             </div>
 
-            <div className="modal-actions">
+            <div className="flex justify-end gap-3 pt-3 border-t border-border-color mt-2">
               <button 
                 type="button" 
-                className="btn-cancel"
+                className="border border-border-color bg-white hover:bg-bg-gray text-text-primary text-xs font-extrabold py-2.5 px-5 rounded-xl transition cursor-pointer"
                 onClick={() => setShowRegisterModal(false)}
               >
                 Cancel
               </button>
-              <button type="submit" className="btn-submit">
+              <button type="submit" className="bg-primary-orange hover:bg-primary-orange-hover text-white text-xs font-extrabold py-2.5 px-6 rounded-xl transition shadow-sm cursor-pointer">
                 Register
               </button>
             </div>

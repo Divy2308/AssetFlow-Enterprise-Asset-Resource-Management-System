@@ -130,25 +130,25 @@ export default function AuditPage({ assets = [], setAssets }) {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+    <div className="flex flex-col gap-6">
       
-      {/* Dynamic Sub-header Info */}
-      <div style={{ marginTop: '-8px', marginBottom: '8px' }}>
-        <span style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: '600' }}>
+      {/* Subheader text */}
+      <div className="mt-[-16px]">
+        <span className="text-xs font-semibold text-text-secondary select-none">
           Audit cycle, checklist, and discrepancy report
         </span>
       </div>
 
       {/* 1. Top Q3 Audit Parameters Box */}
-      <div className="audit-header-card">
+      <div className="bg-white border border-border-color rounded-2xl shadow-sm grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-border-color overflow-hidden">
         
         {/* Cell 1: Cycle details */}
-        <div className="audit-header-section divider">
-          <div className="param-icon-box">
+        <div className="flex items-center gap-4 p-5 text-left">
+          <div className="w-10 h-10 rounded-xl bg-primary-orange-light text-primary-orange flex items-center justify-center shrink-0">
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              width="22"
-              height="22"
+              width="20"
+              height="20"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -161,26 +161,26 @@ export default function AuditPage({ assets = [], setAssets }) {
               <path d="m9 14 2 2 4-4" />
             </svg>
           </div>
-          <div className="param-content">
-            <span className="param-title">Q3 Audit: Engineering dept - 1-15 Jul</span>
-            <span className="param-sub">Auditors: A. Rao, S. Iqbal</span>
+          <div className="flex flex-col gap-0.5">
+            <span className="text-sm font-extrabold text-text-primary">Q3 Audit: Engineering dept</span>
+            <span className="text-[11px] font-bold text-text-secondary">Auditors: A. Rao, S. Iqbal</span>
           </div>
         </div>
 
         {/* Cell 2: Period range */}
-        <div className="audit-header-section divider">
-          <div className="param-icon-box">
-            <CalendarIcon size={20} />
+        <div className="flex items-center gap-4 p-5 text-left">
+          <div className="w-10 h-10 rounded-xl bg-[#EFF6FF] text-[#3B82F6] flex items-center justify-center shrink-0">
+            <CalendarIcon size={18} />
           </div>
-          <div className="param-content">
-            <span className="param-sub" style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Cycle Period</span>
-            <span className="param-title" style={{ fontSize: '13px', marginTop: '2px' }}>1 - 15 Jul 2026</span>
+          <div className="flex flex-col gap-0.5">
+            <span className="text-[10px] font-extrabold text-text-secondary uppercase tracking-wider">Cycle Period</span>
+            <span className="text-sm font-extrabold text-text-primary">1 - 15 Jul 2026</span>
           </div>
         </div>
 
         {/* Cell 3: Metrics count */}
-        <div className="audit-header-section">
-          <div className="param-icon-box">
+        <div className="flex items-center gap-4 p-5 text-left">
+          <div className="w-10 h-10 rounded-xl bg-[#ECFDF5] text-success-green-text flex items-center justify-center shrink-0">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="20"
@@ -198,96 +198,96 @@ export default function AuditPage({ assets = [], setAssets }) {
               <path d="M16 3.13a4 4 0 0 1 0 7.75" />
             </svg>
           </div>
-          <div className="param-content">
-            <span className="param-sub" style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Total Assets</span>
-            <span className="param-title" style={{ fontSize: '18px', marginTop: '2px', fontWeight: '800' }}>123</span>
+          <div className="flex flex-col gap-0.5">
+            <span className="text-[10px] font-extrabold text-text-secondary uppercase tracking-wider">Total Assets</span>
+            <span className="text-lg font-black text-text-primary leading-none">123</span>
           </div>
         </div>
 
       </div>
 
       {/* 2. Audit Table Grid */}
-      <div className="table-card">
-        <h3 className="section-title" style={{ padding: '24px 24px 8px 24px', margin: 0, fontSize: '16px' }}>
+      <div className="bg-white border border-border-color rounded-2xl shadow-sm overflow-hidden">
+        <h3 className="font-heading text-sm font-extrabold text-text-primary border-b border-border-color p-4 pb-3">
           Audit Summary
         </h3>
         
-        <table className="org-table">
-          <thead>
+        <table className="w-full border-collapse text-left">
+          <thead className="bg-bg-gray border-b border-border-color">
             <tr>
-              <th>Asset</th>
-              <th>Expected Location</th>
-              <th>Actual Location</th>
-              <th>Status</th>
-              <th>Remarks</th>
-              <th style={{ textAlign: 'center' }}>Action</th>
+              <th className="p-4 text-xs font-bold text-text-secondary uppercase tracking-wider">Asset</th>
+              <th className="p-4 text-xs font-bold text-text-secondary uppercase tracking-wider">Expected Location</th>
+              <th className="p-4 text-xs font-bold text-text-secondary uppercase tracking-wider">Actual Location</th>
+              <th className="p-4 text-xs font-bold text-text-secondary uppercase tracking-wider">Status</th>
+              <th className="p-4 text-xs font-bold text-text-secondary uppercase tracking-wider">Remarks</th>
+              <th className="p-4 text-xs font-bold text-text-secondary uppercase tracking-wider w-[5%] text-center">Action</th>
             </tr>
           </thead>
           <tbody>
             {visibleItems.map((item) => {
               const AssetIcon = getAssetIcon(item.type);
               return (
-                <tr key={item.id}>
+                <tr key={item.id} className="border-b border-border-color last:border-b-0 hover:bg-bg-gray/30 transition-all">
                   {/* Asset Tag & Name */}
-                  <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <div 
-                        style={{ 
-                          width: '32px', 
-                          height: '32px', 
-                          borderRadius: '8px', 
-                          backgroundColor: '#FFF4EF', 
-                          color: '#FF5A1F',
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          justifyContent: 'center'
-                        }}
-                      >
+                  <td className="p-4 text-sm font-medium text-text-primary">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-primary-orange-light text-primary-orange">
                         <AssetIcon size={16} />
                       </div>
-                      <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        <span style={{ fontWeight: '700', fontSize: '13px', color: 'var(--text-primary)' }}>{item.tag}</span>
-                        <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '500' }}>{item.name}</span>
+                      <div className="flex flex-col">
+                        <span className="font-extrabold text-text-primary text-xs tracking-tight">{item.tag}</span>
+                        <span className="text-[10px] text-text-secondary font-semibold mt-0.5">{item.name}</span>
                       </div>
                     </div>
                   </td>
 
                   {/* Expected Location */}
-                  <td>
-                    <span style={{ fontWeight: '600', color: 'var(--text-primary)', fontSize: '13px' }}>
+                  <td className="p-4 text-sm font-medium text-text-primary">
+                    <span className="font-bold text-text-primary text-xs">
                       {item.expected}
                     </span>
                   </td>
 
                   {/* Actual Location */}
-                  <td>
-                    <span style={{ fontWeight: '600', color: 'var(--text-primary)', fontSize: '13px' }}>
+                  <td className="p-4 text-sm font-medium text-text-primary">
+                    <span className="font-bold text-text-primary text-xs">
                       {item.actual}
                     </span>
                   </td>
 
                   {/* Status Badges */}
-                  <td>
-                    <span className={`status-badge ${item.status.toLowerCase()}`}>
-                      <span className="status-dot" />
+                  <td className="p-4 text-sm font-medium text-text-primary">
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border ${
+                      item.status === 'Verified'
+                        ? 'bg-success-green-bg text-success-green-text border-success-green-border/30'
+                        : item.status === 'Missing'
+                        ? 'bg-red-50 text-alert-red-text border-alert-red-border/20'
+                        : 'bg-orange-50 text-primary-orange border-primary-orange-border/20'
+                    }`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${
+                        item.status === 'Verified'
+                          ? 'bg-success-green-text'
+                          : item.status === 'Missing'
+                          ? 'bg-alert-red-text'
+                          : 'bg-primary-orange'
+                      }`} />
                       {item.status}
                     </span>
                   </td>
 
                   {/* Remarks text */}
-                  <td>
-                    <span style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: '500' }}>
+                  <td className="p-4 text-sm font-medium text-text-primary">
+                    <span className="text-xs text-text-secondary font-semibold">
                       {item.remarks || '—'}
                     </span>
                   </td>
 
                   {/* Action Preview eye button */}
-                  <td>
-                    <div style={{ display: 'flex', justifyContent: 'center' }}>
+                  <td className="p-4 text-sm font-medium text-text-primary">
+                    <div className="flex justify-center">
                       <button
-                        className="btn-eye"
+                        className="w-8 h-8 rounded-lg text-text-secondary hover:bg-bg-gray hover:text-text-primary flex items-center justify-center transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                         disabled={cycleClosed}
-                        style={{ opacity: cycleClosed ? 0.5 : 1 }}
                         onClick={() => handleOpenEdit(item)}
                         aria-label="View asset details"
                       >
@@ -302,10 +302,9 @@ export default function AuditPage({ assets = [], setAssets }) {
         </table>
 
         {/* View All Assets toggle block */}
-        <div style={{ padding: '16px', display: 'flex', justifyContent: 'center', borderTop: '1px solid var(--border-color)' }}>
+        <div className="p-4 flex justify-center border-t border-border-color bg-white">
           <button
-            className="btn-outline-orange"
-            style={{ padding: '8px 16px', fontSize: '13px', borderRadius: '8px' }}
+            className="border border-primary-orange text-primary-orange hover:bg-primary-orange-light text-xs font-extrabold py-2 px-5 rounded-xl transition flex items-center gap-1.5 cursor-pointer"
             onClick={() => setShowAllAssets(!showAllAssets)}
           >
             {showAllAssets ? 'Show Less' : 'View all assets'}
@@ -316,33 +315,23 @@ export default function AuditPage({ assets = [], setAssets }) {
 
       {/* 3. Discrepancy Report warning Banner */}
       {flaggedCount > 0 ? (
-        <div 
-          className="alert-banner" 
-          style={{ 
-            marginBottom: 0, 
-            backgroundColor: 'var(--alert-orange-bg)', 
-            borderColor: 'var(--alert-orange-border)',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            padding: '16px 24px'
-          }}
-        >
-          <div className="alert-message-wrap" style={{ alignItems: 'center' }}>
-            <div className="alert-icon-box" style={{ color: 'var(--primary-orange)' }}>
-              <FileTextIcon size={22} strokeWidth={2.2} />
+        <div className="bg-orange-50 border border-primary-orange-border/30 rounded-2xl p-4 flex justify-between items-center gap-4 flex-wrap text-left">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-orange-100 text-primary-orange flex items-center justify-center shrink-0">
+              <FileTextIcon size={20} strokeWidth={2.2} />
             </div>
-            <div>
-              <span className="alert-text" style={{ color: 'var(--primary-orange)', display: 'block', fontWeight: '700' }}>
+            <div className="flex flex-col gap-0.5">
+              <span className="text-sm font-extrabold text-primary-orange">
                 {flaggedCount} assets flagged – discrepancy report generated automatically
               </span>
-              <span style={{ fontSize: '13px', color: '#D05A20', fontWeight: '500' }}>
+              <span className="text-xs font-semibold text-orange-700/80">
                 Review the discrepancies and take necessary actions.
               </span>
             </div>
           </div>
 
           <button 
-            className="btn-outline-orange"
+            className="border border-primary-orange text-primary-orange hover:bg-primary-orange-light text-xs font-extrabold py-2.5 px-5 rounded-xl transition flex items-center gap-1.5 cursor-pointer shadow-xs bg-white"
             onClick={() => setShowReportModal(true)}
           >
             <FileTextIcon size={14} />
@@ -350,23 +339,13 @@ export default function AuditPage({ assets = [], setAssets }) {
           </button>
         </div>
       ) : (
-        <div 
-          className="alert-banner" 
-          style={{ 
-            marginBottom: 0, 
-            backgroundColor: '#E6F9F0', 
-            borderColor: '#A7F3D0',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            padding: '16px 24px'
-          }}
-        >
-          <div className="alert-message-wrap" style={{ alignItems: 'center' }}>
-            <div className="alert-icon-box" style={{ color: '#10B981' }}>
+        <div className="bg-success-green-bg border border-success-green-border/30 rounded-2xl p-4 flex justify-between items-center gap-4 flex-wrap text-left">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-green-100 text-success-green-text flex items-center justify-center shrink-0">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                width="22"
-                height="22"
+                width="20"
+                height="20"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -378,11 +357,11 @@ export default function AuditPage({ assets = [], setAssets }) {
                 <polyline points="22 4 12 14.01 9 11.01" />
               </svg>
             </div>
-            <div>
-              <span className="alert-text" style={{ color: '#10B981', display: 'block', fontWeight: '700' }}>
+            <div className="flex flex-col gap-0.5">
+              <span className="text-sm font-extrabold text-success-green-text">
                 All clear! No discrepancies flagged in the current cycle
               </span>
-              <span style={{ fontSize: '13px', color: '#059669', fontWeight: '500' }}>
+              <span className="text-xs font-semibold text-success-green-text/80">
                 All checked assets are verified and correct in location.
               </span>
             </div>
@@ -391,12 +370,11 @@ export default function AuditPage({ assets = [], setAssets }) {
       )}
 
       {/* 4. Slate Close Audit Cycle Trigger Button */}
-      <div>
+      <div className="pt-1">
         <button
-          className="btn-close-cycle"
+          className="bg-primary-orange hover:bg-primary-orange-hover disabled:bg-primary-orange/60 text-white text-sm font-extrabold py-3 px-6 rounded-xl transition shadow-sm cursor-pointer flex items-center gap-2 disabled:cursor-not-allowed"
           disabled={cycleClosed}
           onClick={handleCloseCycle}
-          style={{ opacity: cycleClosed ? 0.6 : 1 }}
         >
           <FileTextIcon size={16} />
           {cycleClosed ? 'Audit Cycle Closed' : 'Close Audit Cycle'}
@@ -404,21 +382,21 @@ export default function AuditPage({ assets = [], setAssets }) {
       </div>
 
       {/* 5. Disclaimer about Audit Cycle details banner */}
-      <div className="banner-green-info">
-        <div className="banner-green-text-wrap">
-          <div className="banner-green-icon">
+      <div className="bg-success-green-bg border border-success-green-border/30 rounded-2xl p-5 flex justify-between items-center gap-4 flex-wrap text-left">
+        <div className="flex items-start gap-4 max-w-2xl">
+          <div className="w-10 h-10 rounded-xl bg-green-100 text-success-green-text flex items-center justify-center shrink-0 mt-0.5">
             <InfoIcon size={20} strokeWidth={2.4} />
           </div>
-          <div>
-            <h4 className="banner-green-title">About Audit Cycle</h4>
-            <p className="banner-green-desc">
+          <div className="flex flex-col gap-1">
+            <h4 className="text-sm font-extrabold text-success-green-text">About Audit Cycle</h4>
+            <p className="text-xs font-semibold text-success-green-text/80 leading-relaxed m-0">
               The audit cycle helps verify the physical presence, condition, and location of assets. Once closed, a discrepancy report is auto-generated for review and action.
             </p>
           </div>
         </div>
 
         {/* Dynamic clipboard shield drawing */}
-        <div style={{ display: 'flex', alignItems: 'center', opacity: 0.85, marginRight: '10px' }}>
+        <div className="flex items-center opacity-80 mr-2 shrink-0">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             width="44"
@@ -439,13 +417,13 @@ export default function AuditPage({ assets = [], setAssets }) {
 
       {/* 6. Edit Audit Item modal overlay */}
       {showEditModal && selectedAuditItem && (
-        <div className="modal-backdrop">
-          <form className="modal-card" onSubmit={handleSaveAudit}>
-            <div className="modal-header">
-              <h3 className="modal-title">Verify Asset: {selectedAuditItem.tag}</h3>
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+          <form className="bg-white border border-border-color rounded-2xl shadow-xl max-w-md w-full overflow-hidden flex flex-col gap-5 p-6" onSubmit={handleSaveAudit}>
+            <div className="flex justify-between items-center pb-3 border-b border-border-color">
+              <h3 className="font-heading text-base font-extrabold text-text-primary">Verify Asset: {selectedAuditItem.tag}</h3>
               <button 
                 type="button" 
-                className="modal-close-btn"
+                className="text-text-secondary hover:text-text-primary text-xl font-bold transition cursor-pointer"
                 onClick={() => {
                   setShowEditModal(false);
                   setSelectedAuditItem(null);
@@ -455,35 +433,35 @@ export default function AuditPage({ assets = [], setAssets }) {
               </button>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '8px' }}>
+            <div className="grid grid-cols-2 gap-4 border-b border-border-color pb-3 mb-1">
               <div>
-                <span style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'block', fontWeight: '600' }}>Asset Name</span>
-                <span style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)' }}>{selectedAuditItem.name}</span>
+                <span className="text-[10px] font-extrabold text-text-secondary uppercase tracking-wider">Asset Name</span>
+                <span className="text-sm font-extrabold text-text-primary mt-0.5 block">{selectedAuditItem.name}</span>
               </div>
               
               <div>
-                <span style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'block', fontWeight: '600' }}>Expected Location</span>
-                <span style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)' }}>{selectedAuditItem.expected}</span>
+                <span className="text-[10px] font-extrabold text-text-secondary uppercase tracking-wider">Expected Location</span>
+                <span className="text-sm font-extrabold text-text-primary mt-0.5 block">{selectedAuditItem.expected}</span>
               </div>
             </div>
 
             {/* Actual Location Input */}
-            <div className="form-group">
-              <label className="form-label">Actual Location</label>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-bold text-text-secondary uppercase tracking-wider">Actual Location</label>
               <input
                 type="text"
                 required
-                className="form-input"
+                className="border border-border-color rounded-xl px-4 py-2.5 bg-white text-sm focus:outline-none focus:border-primary-orange text-text-primary font-medium"
                 value={editForm.actual}
                 onChange={(e) => setEditForm({ ...editForm, actual: e.target.value })}
               />
             </div>
 
             {/* Select Status */}
-            <div className="form-group">
-              <label className="form-label">Verification Status</label>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-bold text-text-secondary uppercase tracking-wider">Verification Status</label>
               <select
-                className="form-select"
+                className="border border-border-color rounded-xl px-4 py-2.5 bg-white text-sm focus:outline-none focus:border-primary-orange text-text-primary font-medium cursor-pointer"
                 value={editForm.status}
                 onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
               >
@@ -494,21 +472,21 @@ export default function AuditPage({ assets = [], setAssets }) {
             </div>
 
             {/* Remarks Input */}
-            <div className="form-group">
-              <label className="form-label">Remarks</label>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-bold text-text-secondary uppercase tracking-wider">Remarks</label>
               <input
                 type="text"
-                className="form-input"
+                className="border border-border-color rounded-xl px-4 py-2.5 bg-white text-sm focus:outline-none focus:border-primary-orange text-text-primary font-medium"
                 placeholder="e.g. All good, screen replacement required"
                 value={editForm.remarks}
                 onChange={(e) => setEditForm({ ...editForm, remarks: e.target.value })}
               />
             </div>
 
-            <div className="modal-actions">
+            <div className="flex justify-end gap-3 pt-3 border-t border-border-color mt-2">
               <button 
                 type="button" 
-                className="btn-cancel"
+                className="border border-border-color bg-white hover:bg-bg-gray text-text-primary text-xs font-extrabold py-2.5 px-5 rounded-xl transition cursor-pointer"
                 onClick={() => {
                   setShowEditModal(false);
                   setSelectedAuditItem(null);
@@ -516,7 +494,7 @@ export default function AuditPage({ assets = [], setAssets }) {
               >
                 Cancel
               </button>
-              <button type="submit" className="btn-submit">
+              <button type="submit" className="bg-primary-orange hover:bg-primary-orange-hover text-white text-xs font-extrabold py-2.5 px-6 rounded-xl transition shadow-sm cursor-pointer">
                 Save Verification
               </button>
             </div>
@@ -526,62 +504,68 @@ export default function AuditPage({ assets = [], setAssets }) {
 
       {/* 7. Discrepancy Report Modal Overlay */}
       {showReportModal && (
-        <div className="modal-backdrop">
-          <div className="modal-card" style={{ maxWidth: '640px' }}>
-            <div className="modal-header">
-              <h3 className="modal-title">Discrepancy Report - Q3 Cycle</h3>
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+          <div className="bg-white border border-border-color rounded-2xl shadow-xl max-w-2xl w-full overflow-hidden flex flex-col gap-5 p-6">
+            <div className="flex justify-between items-center pb-3 border-b border-border-color">
+              <h3 className="font-heading text-base font-extrabold text-text-primary">Discrepancy Report - Q3 Cycle</h3>
               <button 
                 type="button" 
-                className="modal-close-btn"
+                className="text-text-secondary hover:text-text-primary text-xl font-bold transition cursor-pointer"
                 onClick={() => setShowReportModal(false)}
               >
                 &times;
               </button>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0 }}>
+            <div className="flex flex-col gap-4">
+              <p className="text-xs font-semibold text-text-secondary leading-relaxed m-0">
                 The following discrepancy rows require direct facility or management action. Missing items trigger security audits, and damaged items require maintenance tickets.
               </p>
 
-              <table className="org-table" style={{ marginTop: '8px' }}>
-                <thead>
-                  <tr>
-                    <th>Asset Tag</th>
-                    <th>Name</th>
-                    <th>Expected</th>
-                    <th>Actual</th>
-                    <th>Discrepancy</th>
-                    <th>Remarks</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {auditItems
-                    .filter((item) => ['Missing', 'Damaged'].includes(item.status))
-                    .map((item) => (
-                      <tr key={item.id}>
-                        <td style={{ fontWeight: '700', fontSize: '13px' }}>{item.tag}</td>
-                        <td style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{item.name}</td>
-                        <td style={{ fontSize: '12px' }}>{item.expected}</td>
-                        <td style={{ fontSize: '12px', color: item.actual === 'Not Found' ? 'var(--alert-red-text)' : 'inherit' }}>
-                          {item.actual}
-                        </td>
-                        <td>
-                          <span className={`status-badge ${item.status.toLowerCase()}`} style={{ padding: '4px 8px', fontSize: '10px' }}>
-                            {item.status}
-                          </span>
-                        </td>
-                        <td style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{item.remarks}</td>
-                      </tr>
-                    ))}
-                </tbody>
-              </table>
+              <div className="border border-border-color rounded-xl overflow-hidden shadow-xs">
+                <table className="w-full border-collapse text-left">
+                  <thead className="bg-bg-gray border-b border-border-color">
+                    <tr>
+                      <th className="p-3 text-[10px] font-extrabold text-text-secondary uppercase tracking-wider">Asset Tag</th>
+                      <th className="p-3 text-[10px] font-extrabold text-text-secondary uppercase tracking-wider">Name</th>
+                      <th className="p-3 text-[10px] font-extrabold text-text-secondary uppercase tracking-wider">Expected</th>
+                      <th className="p-3 text-[10px] font-extrabold text-text-secondary uppercase tracking-wider">Actual</th>
+                      <th className="p-3 text-[10px] font-extrabold text-text-secondary uppercase tracking-wider">Discrepancy</th>
+                      <th className="p-3 text-[10px] font-extrabold text-text-secondary uppercase tracking-wider">Remarks</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {auditItems
+                      .filter((item) => ['Missing', 'Damaged'].includes(item.status))
+                      .map((item) => (
+                        <tr key={item.id} className="border-b border-border-color last:border-b-0">
+                          <td className="p-3 text-xs font-bold text-text-primary">{item.tag}</td>
+                          <td className="p-3 text-[11px] font-semibold text-text-secondary">{item.name}</td>
+                          <td className="p-3 text-[11px] font-semibold text-text-primary">{item.expected}</td>
+                          <td className={`p-3 text-[11px] font-bold ${item.actual === 'Not Found' ? 'text-alert-red-text' : 'text-text-primary'}`}>
+                            {item.actual}
+                          </td>
+                          <td className="p-3 text-[11px] font-medium text-text-primary">
+                            <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[9px] font-bold border ${
+                              item.status === 'Missing'
+                                ? 'bg-red-50 text-alert-red-text border-alert-red-border/20'
+                                : 'bg-orange-50 text-primary-orange border-primary-orange-border/20'
+                            }`}>
+                              {item.status}
+                            </span>
+                          </td>
+                          <td className="p-3 text-[11px] font-semibold text-text-secondary max-w-[120px] truncate">{item.remarks}</td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
 
-            <div className="modal-actions">
+            <div className="flex justify-end gap-3 pt-3 border-t border-border-color mt-2">
               <button 
                 type="button" 
-                className="btn-submit"
+                className="bg-primary-orange hover:bg-primary-orange-hover text-white text-xs font-extrabold py-2.5 px-5 rounded-xl transition shadow-sm cursor-pointer"
                 onClick={() => {
                   window.print();
                 }}
@@ -590,7 +574,7 @@ export default function AuditPage({ assets = [], setAssets }) {
               </button>
               <button 
                 type="button" 
-                className="btn-cancel"
+                className="border border-border-color bg-white hover:bg-bg-gray text-text-primary text-xs font-extrabold py-2.5 px-5 rounded-xl transition cursor-pointer"
                 onClick={() => setShowReportModal(false)}
               >
                 Close Window

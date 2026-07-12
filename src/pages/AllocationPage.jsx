@@ -94,20 +94,21 @@ export default function AllocationPage({ assets, setAssets, employeesList }) {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+    <div className="flex flex-col gap-6">
       
       {/* Asset Selection Card */}
-      <div className="allocation-form-card">
+      <div className="bg-white border border-border-color rounded-2xl p-6 shadow-sm flex flex-col gap-6">
         
         {/* A. Asset Selector Input Group */}
-        <div className="form-group">
-          <label className="form-label">Asset</label>
-          <div className="icon-select-input">
-            <span className="select-icon-left">
+        <div className="flex flex-col gap-2">
+          <label className="text-xs font-bold text-text-secondary uppercase tracking-wider">Asset</label>
+          <div className="relative">
+            <span className="absolute left-4 top-3 text-text-secondary">
               <SelectedIcon size={20} />
             </span>
             <select
               value={selectedAssetId}
+              className="w-full border border-border-color bg-white pl-11 pr-10 py-3 rounded-xl text-sm font-semibold focus:outline-none focus:border-primary-orange text-text-primary appearance-none cursor-pointer"
               onChange={(e) => {
                 setSelectedAssetId(e.target.value);
                 setTargetEmployee('');
@@ -120,7 +121,7 @@ export default function AllocationPage({ assets, setAssets, employeesList }) {
                 </option>
               ))}
             </select>
-            <span className="select-chevron-right">
+            <span className="absolute right-4 top-3.5 text-text-secondary pointer-events-none">
               <ChevronDownIcon size={16} />
             </span>
           </div>
@@ -128,47 +129,25 @@ export default function AllocationPage({ assets, setAssets, employeesList }) {
 
         {/* B. Dynamic Warning/Allocation Status Banner */}
         {isAllocated ? (
-          <div 
-            className="alert-banner" 
-            style={{ 
-              marginBottom: 0, 
-              backgroundColor: 'var(--alert-red-bg)', 
-              borderColor: 'var(--alert-red-border)',
-              flexDirection: 'column',
-              alignItems: 'flex-start',
-              gap: '4px',
-              padding: '16px 20px'
-            }}
-          >
-            <div className="alert-message-wrap" style={{ alignItems: 'flex-start' }}>
-              <div className="alert-icon-box" style={{ color: 'var(--alert-red-text)', marginTop: '2px' }}>
+          <div className="bg-alert-red-bg border border-alert-red-border/60 rounded-2xl p-4 flex flex-col gap-1 text-left">
+            <div className="flex items-start gap-3">
+              <div className="text-alert-red-text shrink-0 mt-0.5">
                 <AlertTriangleIcon size={20} />
               </div>
-              <div>
-                <span className="alert-text" style={{ color: 'var(--alert-red-text)', display: 'block', fontWeight: '700' }}>
+              <div className="flex flex-col gap-0.5">
+                <span className="text-sm font-extrabold text-alert-red-text">
                   Already Allocated to {currentOwner} ({employeesList.find(e => e.name === currentOwner)?.dept || 'Engineering'})
                 </span>
-                <span style={{ fontSize: '13px', color: '#D54040', fontWeight: '500' }}>
+                <span className="text-xs font-semibold text-red-700/80">
                   Direct re-allocation is blocked – submit a transfer request below.
                 </span>
               </div>
             </div>
           </div>
         ) : (
-          <div 
-            className="alert-banner" 
-            style={{ 
-              marginBottom: 0, 
-              backgroundColor: '#E6F9F0', 
-              borderColor: '#A7F3D0',
-              flexDirection: 'column',
-              alignItems: 'flex-start',
-              gap: '4px',
-              padding: '16px 20px'
-            }}
-          >
-            <div className="alert-message-wrap" style={{ alignItems: 'center' }}>
-              <div className="alert-icon-box" style={{ color: '#10B981' }}>
+          <div className="bg-success-green-bg border border-success-green-border/30 rounded-2xl p-4 flex flex-col gap-1 text-left">
+            <div className="flex items-center gap-3">
+              <div className="text-success-green-text shrink-0">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   width="20"
@@ -184,11 +163,11 @@ export default function AllocationPage({ assets, setAssets, employeesList }) {
                   <polyline points="22 4 12 14.01 9 11.01" />
                 </svg>
               </div>
-              <div>
-                <span className="alert-text" style={{ color: '#10B981', display: 'block', fontWeight: '700' }}>
+              <div className="flex flex-col gap-0.5">
+                <span className="text-sm font-extrabold text-success-green-text">
                   Available for allocation
                 </span>
-                <span style={{ fontSize: '13px', color: '#059669', fontWeight: '500' }}>
+                <span className="text-xs font-semibold text-success-green-text/80">
                   This asset is not currently assigned. You can allocate it directly.
                 </span>
               </div>
@@ -197,40 +176,45 @@ export default function AllocationPage({ assets, setAssets, employeesList }) {
         )}
 
         {/* C. Transfer Request Form Panel */}
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          <h3 className="section-title" style={{ fontSize: '16px', margin: '4px 0 0 0' }}>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+          <h3 className="font-heading text-sm font-extrabold text-text-primary border-b border-border-color pb-2">
             {isAllocated ? 'Transfer Request' : 'Direct Allocation'}
           </h3>
           
-          <div className="form-row">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* From Selector */}
-            <div className="form-group">
-              <label className="form-label">From</label>
-              <div className="icon-select-input">
-                <span className="select-icon-left">
+            <div className="flex flex-col gap-2">
+              <label className="text-xs font-bold text-text-secondary uppercase tracking-wider">From</label>
+              <div className="relative">
+                <span className="absolute left-4 top-3 text-text-secondary">
                   <UserIcon size={18} />
                 </span>
-                <select disabled value="owner">
+                <select 
+                  disabled 
+                  value="owner"
+                  className="w-full border border-border-color bg-[#F8FAFC]/60 pl-11 pr-10 py-3 rounded-xl text-sm font-semibold focus:outline-none text-text-secondary appearance-none cursor-not-allowed"
+                >
                   <option value="owner">
                     {isAllocated ? currentOwner : 'N/A - Direct Allocation'}
                   </option>
                 </select>
-                <span className="select-chevron-right">
+                <span className="absolute right-4 top-3.5 text-text-muted pointer-events-none">
                   <ChevronDownIcon size={16} />
                 </span>
               </div>
             </div>
 
             {/* To Selector */}
-            <div className="form-group">
-              <label className="form-label">To</label>
-              <div className="icon-select-input">
-                <span className="select-icon-left">
+            <div className="flex flex-col gap-2">
+              <label className="text-xs font-bold text-text-secondary uppercase tracking-wider">To</label>
+              <div className="relative">
+                <span className="absolute left-4 top-3 text-text-secondary">
                   <UserIcon size={18} />
                 </span>
                 <select
                   required
                   value={targetEmployee}
+                  className="w-full border border-border-color bg-white pl-11 pr-10 py-3 rounded-xl text-sm font-semibold focus:outline-none focus:border-primary-orange text-text-primary appearance-none cursor-pointer"
                   onChange={(e) => setTargetEmployee(e.target.value)}
                 >
                   <option value="">Select Employee...</option>
@@ -242,7 +226,7 @@ export default function AllocationPage({ assets, setAssets, employeesList }) {
                       </option>
                     ))}
                 </select>
-                <span className="select-chevron-right">
+                <span className="absolute right-4 top-3.5 text-text-secondary pointer-events-none">
                   <ChevronDownIcon size={16} />
                 </span>
               </div>
@@ -250,26 +234,26 @@ export default function AllocationPage({ assets, setAssets, employeesList }) {
           </div>
 
           {/* Reason Field */}
-          <div className="form-group">
-            <label className="form-label">Reason</label>
-            <div className="form-textarea-container">
+          <div className="flex flex-col gap-2">
+            <label className="text-xs font-bold text-text-secondary uppercase tracking-wider">Reason</label>
+            <div className="relative">
               <textarea
-                className="form-textarea"
+                className="w-full border border-border-color bg-white px-4 py-3 rounded-xl text-sm font-medium focus:outline-none focus:border-primary-orange text-text-primary min-h-[100px] placeholder:text-text-muted resize-none"
                 required
                 maxLength={300}
                 placeholder="Enter reason for transfer..."
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
               />
-              <span className="textarea-counter">
+              <span className="absolute bottom-3 right-4 text-[10px] font-extrabold text-text-muted">
                 {reason.length} / 300
               </span>
             </div>
           </div>
 
           {/* Submit Action Button */}
-          <div>
-            <button type="submit" className="btn-primary-orange">
+          <div className="pt-2">
+            <button type="submit" className="bg-primary-orange hover:bg-primary-orange-hover text-white text-sm font-extrabold py-3 px-6 rounded-xl transition shadow-sm cursor-pointer flex items-center gap-2">
               <SendIcon size={16} />
               Submit Request
             </button>
@@ -278,24 +262,24 @@ export default function AllocationPage({ assets, setAssets, employeesList }) {
       </div>
 
       {/* D. Allocation History Log Feed */}
-      <div className="history-section">
-        <h3 className="section-title">Allocation history</h3>
-        <div className="history-card">
-          <ul className="history-list">
+      <div className="flex flex-col gap-4">
+        <h3 className="font-heading text-base font-extrabold text-text-primary">Allocation history</h3>
+        <div className="bg-white border border-border-color rounded-2xl p-5 shadow-sm">
+          <ul className="flex flex-col gap-4 list-none p-0 m-0">
             {historyLogs.map((log) => (
-              <li key={log.id} className="history-item">
+              <li key={log.id} className="flex items-center gap-4 text-sm font-semibold text-text-primary pb-4 border-b border-border-color last:border-b-0 last:pb-0">
                 {/* Visual indicator icon */}
-                <div className="history-icon-box">
+                <div className="w-8 h-8 rounded-lg bg-bg-gray text-text-secondary flex items-center justify-center shrink-0">
                   <CalendarIcon size={16} />
                 </div>
                 
                 {/* Timeline date */}
-                <div className="history-date">
+                <div className="text-xs font-extrabold text-text-secondary min-w-[50px]">
                   {log.date}
                 </div>
                 
                 {/* Details snippet */}
-                <div className="history-details-text">
+                <div className="text-text-primary flex-grow">
                   {log.details}
                 </div>
               </li>

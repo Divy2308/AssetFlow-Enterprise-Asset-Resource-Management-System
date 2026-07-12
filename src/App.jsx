@@ -61,17 +61,17 @@ function App() {
   const currentTitle = TAB_LABELS[activeTab] || 'AssetFlow';
 
   return (
-    <div className="app-layout">
+    <div className="flex bg-bg-gray min-h-screen">
       {/* Left Sidebar */}
       <Sidebar activeTab={activeTab} onTabChange={setActiveTab} unreadCount={unreadCount} />
 
       {/* Right Scrollable Content Frame */}
-      <main className="main-area">
+      <main className="flex-grow overflow-y-auto p-8 flex flex-col justify-between">
         {/* Top Header */}
         <Header title={currentTitle} unreadCount={unreadCount} onNotificationClick={() => setActiveTab('notifications')} />
 
         {/* Dynamic Inner Page Component */}
-        <div style={{ flexGrow: 1, marginTop: '8px' }}>
+        <div className="flex-grow mt-2">
           {activeTab === 'dashboard' ? (
             <DashboardPage />
           ) : activeTab === 'org-setup' ? (
@@ -96,12 +96,12 @@ function App() {
         </div>
 
         {/* Footer */}
-        <footer className="app-footer">
+        <footer className="flex justify-between items-center text-xs font-semibold text-text-muted mt-12 pt-6 border-t border-border-color">
           <div>&copy; 2025 AssetFlow. All rights reserved.</div>
-          <div className="footer-links">
-            <a href="#privacy">Privacy Policy</a>
-            <span style={{ opacity: 0.5 }}>|</span>
-            <a href="#terms">Terms of Service</a>
+          <div className="flex gap-4">
+            <a href="#privacy" className="hover:text-text-secondary transition-all">Privacy Policy</a>
+            <span className="opacity-30">|</span>
+            <a href="#terms" className="hover:text-text-secondary transition-all">Terms of Service</a>
           </div>
         </footer>
       </main>

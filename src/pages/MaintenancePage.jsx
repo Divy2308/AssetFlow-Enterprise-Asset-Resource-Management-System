@@ -38,11 +38,11 @@ export default function MaintenancePage({ assets = [], setAssets }) {
 
   // Kanban Columns Configuration
   const COLUMNS = [
-    { id: 'pending', title: 'Pending', count: tasks.filter(t => t.column === 'pending').length, icon: ClockIcon },
-    { id: 'approved', title: 'Approved', count: tasks.filter(t => t.column === 'approved').length, icon: CheckCircleIcon },
-    { id: 'technician', title: 'Technician Assigned', count: tasks.filter(t => t.column === 'technician').length, icon: UserIcon },
-    { id: 'in-progress', title: 'In Progress', count: tasks.filter(t => t.column === 'in-progress').length, icon: SettingsIcon },
-    { id: 'resolved', title: 'Resolved', count: tasks.filter(t => t.column === 'resolved').length, icon: CheckCircleIcon }
+    { id: 'pending', title: 'Pending', count: tasks.filter(t => t.column === 'pending').length, icon: ClockIcon, colorClass: 'text-orange-500' },
+    { id: 'approved', title: 'Approved', count: tasks.filter(t => t.column === 'approved').length, icon: CheckCircleIcon, colorClass: 'text-success-green-text' },
+    { id: 'technician', title: 'Technician Assigned', count: tasks.filter(t => t.column === 'technician').length, icon: UserIcon, colorClass: 'text-blue-500' },
+    { id: 'in-progress', title: 'In Progress', count: tasks.filter(t => t.column === 'in-progress').length, icon: SettingsIcon, colorClass: 'text-purple-500' },
+    { id: 'resolved', title: 'Resolved', count: tasks.filter(t => t.column === 'resolved').length, icon: CheckCircleIcon, colorClass: 'text-success-green-text' }
   ];
 
   // Helper to retrieve correct icon component based on type
@@ -54,6 +54,16 @@ export default function MaintenancePage({ assets = [], setAssets }) {
       case 'wrench': return WrenchIcon;
       case 'chair': return ChairIcon;
       default: return BoxIcon;
+    }
+  };
+
+  const getCardIconColors = (color) => {
+    switch (color) {
+      case 'orange': return 'bg-[#FFF4EF] text-[#FF5A1F]';
+      case 'green': return 'bg-[#ECFDF5] text-[#10B981]';
+      case 'blue': return 'bg-[#EFF6FF] text-[#3B82F6]';
+      case 'purple': return 'bg-[#F5F3FF] text-[#8A5CF5]';
+      default: return 'bg-bg-gray text-text-secondary';
     }
   };
 
@@ -188,74 +198,80 @@ export default function MaintenancePage({ assets = [], setAssets }) {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+    <div className="flex flex-col gap-6">
       
-      {/* Dynamic Sub-header Info */}
-      <div style={{ marginTop: '-8px', marginBottom: '8px' }}>
-        <span style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: '600' }}>
+      {/* Sub-header text (handled below the main title split) */}
+      <div className="mt-[-16px]">
+        <span className="text-xs font-semibold text-text-secondary select-none">
           Approval workflow board
         </span>
       </div>
 
       {/* 1. Kanban Board Grid */}
-      <div className="kanban-board">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-start">
         {COLUMNS.map((col) => (
           <div
             key={col.id}
-            className={`kanban-column ${col.id} ${draggedOverCol === col.id ? 'drag-over' : ''}`}
+            className={`w-full flex flex-col gap-3 bg-bg-gray border border-border-color border-dashed p-3 rounded-2xl min-h-[350px] transition-colors duration-200 ${
+              draggedOverCol === col.id ? 'bg-primary-orange-light/30 border-primary-orange-border/30' : ''
+            }`}
             onDragOver={(e) => handleDragOver(e, col.id)}
             onDragLeave={handleDragLeave}
             onDrop={(e) => handleDrop(e, col.id)}
           >
             {/* Column Header */}
-            <div className="kanban-column-header">
-              <div className="column-title">
-                <span className="column-title-icon">
-                  <col.icon size={14} />
+            <div className="flex justify-between items-center mb-1">
+              <div className="flex items-center gap-1.5 text-[11px] font-bold text-text-primary uppercase tracking-wider">
+                <span className={`shrink-0 flex items-center justify-center ${col.colorClass}`}>
+                  <col.icon size={13} />
                 </span>
                 {col.title}
               </div>
-              <div className="column-count">{col.count}</div>
+              <div className="bg-white border border-border-color text-text-secondary text-[9px] font-extrabold rounded-full px-2 py-0.5 shadow-sm">
+                {col.count}
+              </div>
             </div>
 
             {/* List of cards in this column */}
-            {tasks
-              .filter((t) => t.column === col.id)
-              .map((task) => {
-                const CardIcon = getCardIcon(task.iconType);
-                return (
-                  <div
-                    key={task.id}
-                    className="kanban-card"
-                    draggable
-                    onDragStart={(e) => handleDragStart(e, task.id)}
-                  >
-                    {/* Card Header (Icon & Tag name) */}
-                    <div className="kanban-card-header">
-                      <div className={`card-icon-box ${task.iconColor}`}>
-                        <CardIcon size={16} />
+            <div className="flex flex-col gap-2.5">
+              {tasks
+                .filter((t) => t.column === col.id)
+                .map((task) => {
+                  const CardIcon = getCardIcon(task.iconType);
+                  return (
+                    <div
+                      key={task.id}
+                      className="bg-white border border-border-color rounded-xl p-4 shadow-xs flex flex-col gap-2.5 cursor-grab active:cursor-grabbing hover:shadow-sm transition-all duration-200"
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, task.id)}
+                    >
+                      {/* Card Header (Icon & Tag name) */}
+                      <div className="flex items-center gap-3">
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${getCardIconColors(task.iconColor)}`}>
+                          <CardIcon size={16} />
+                        </div>
+                        <span className="text-[11px] font-extrabold text-text-primary tracking-tight">{task.tag}</span>
                       </div>
-                      <span className="kanban-card-tag">{task.tag}</span>
-                    </div>
 
-                    {/* Card Content (Title & Desc) */}
-                    <div className="kanban-card-content">
-                      <h4 className="kanban-card-title">{task.title}</h4>
-                      {task.desc && <p className="kanban-card-desc">{task.desc}</p>}
-                    </div>
+                      {/* Card Content (Title & Desc) */}
+                      <div className="flex flex-col gap-0.5">
+                        <h4 className="text-[11px] font-bold text-text-primary leading-snug">{task.title}</h4>
+                        {task.desc && <p className="text-[10px] font-semibold text-text-secondary mt-0.5">{task.desc}</p>}
+                      </div>
 
-                    {/* Date reported */}
-                    <div className="kanban-card-date">
-                      <CalendarIcon size={12} className="calendar-icon" />
-                      <span>{task.dateText}</span>
+                      {/* Date reported */}
+                      <div className="flex items-center gap-1.5 text-[9px] font-bold text-text-secondary mt-1 border-t border-border-color pt-2 select-none">
+                        <CalendarIcon size={12} className="text-text-secondary" />
+                        <span>{task.dateText}</span>
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+            </div>
 
             {/* Add Task placeholder button inside column */}
             <button
-              className={`btn-add-task ${col.id}`}
+              className="w-full bg-white border border-border-color border-dashed hover:border-primary-orange text-text-secondary hover:text-primary-orange text-[10px] font-bold py-2 rounded-xl transition cursor-pointer flex items-center justify-center gap-1 mt-1"
               onClick={() => openAddTaskModal(col.id)}
             >
               + Add Task
@@ -265,29 +281,22 @@ export default function MaintenancePage({ assets = [], setAssets }) {
       </div>
 
       {/* 2. Alert Warning Disclaimer Banner with clipboard graphics */}
-      <div 
-        className="info-banner" 
-        style={{ 
-          marginTop: '8px', 
-          justifyContent: 'space-between',
-          background: 'linear-gradient(90deg, var(--primary-orange-light) 0%, #FFF9F6 100%)' 
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div className="info-banner-icon">
+      <div className="bg-primary-orange-light border border-primary-orange-border/20 rounded-2xl p-4 flex justify-between items-center flex-wrap gap-4 mt-2">
+        <div className="flex items-center gap-3">
+          <div className="text-primary-orange flex items-center shrink-0">
             <InfoIcon size={20} strokeWidth={2.4} />
           </div>
-          <p className="info-banner-text">
+          <p className="text-xs font-semibold text-primary-orange leading-relaxed m-0">
             Approving a card moves the asset to under maintenance, resolving return it to available.
           </p>
         </div>
         
         {/* Sleek inline checklist vector decorator */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', opacity: 0.8, marginRight: '10px' }}>
+        <div className="flex items-center gap-3 opacity-70 mr-2 shrink-0">
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            width="28"
-            height="28"
+            width="24"
+            height="24"
             viewBox="0 0 24 24"
             fill="none"
             stroke="var(--primary-orange)"
@@ -300,15 +309,15 @@ export default function MaintenancePage({ assets = [], setAssets }) {
           </svg>
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            width="28"
-            height="28"
+            width="24"
+            height="24"
             viewBox="0 0 24 24"
             fill="none"
             stroke="var(--primary-orange)"
             strokeWidth="1.8"
             strokeLinecap="round"
             strokeLinejoin="round"
-            style={{ opacity: 0.6 }}
+            className="opacity-60"
           >
             <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.1a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
             <circle cx="12" cy="12" r="3" />
@@ -318,15 +327,15 @@ export default function MaintenancePage({ assets = [], setAssets }) {
 
       {/* 3. Kanban Add Task Modal Overlay */}
       {showAddModal && (
-        <div className="modal-backdrop">
-          <form className="modal-card" onSubmit={handleFormSubmit}>
-            <div className="modal-header">
-              <h3 className="modal-title">
-                Add Task to Column: <span style={{ color: 'var(--primary-orange)' }}>{targetColumn.toUpperCase()}</span>
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+          <form className="bg-white border border-border-color rounded-2xl shadow-xl max-w-md w-full overflow-hidden flex flex-col gap-5 p-6" onSubmit={handleFormSubmit}>
+            <div className="flex justify-between items-center pb-3 border-b border-border-color">
+              <h3 className="font-heading text-base font-extrabold text-text-primary">
+                Add Task to Column: <span className="text-primary-orange">{targetColumn.toUpperCase()}</span>
               </h3>
               <button 
                 type="button" 
-                className="modal-close-btn"
+                className="text-text-secondary hover:text-text-primary text-xl font-bold transition cursor-pointer"
                 onClick={() => setShowAddModal(false)}
               >
                 &times;
@@ -334,10 +343,10 @@ export default function MaintenancePage({ assets = [], setAssets }) {
             </div>
 
             {/* Select Tag from existing Assets */}
-            <div className="form-group">
-              <label className="form-label">Select Asset (Tag / Serial)</label>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-bold text-text-secondary uppercase tracking-wider">Select Asset (Tag / Serial)</label>
               <select
-                className="form-select"
+                className="border border-border-color rounded-xl px-4 py-2.5 bg-white text-sm focus:outline-none focus:border-primary-orange text-text-primary font-medium cursor-pointer"
                 value={taskForm.tag}
                 onChange={(e) => setTaskForm({ ...taskForm, tag: e.target.value })}
               >
@@ -350,39 +359,39 @@ export default function MaintenancePage({ assets = [], setAssets }) {
             </div>
 
             {/* Issue Title Input */}
-            <div className="form-group">
-              <label className="form-label">Issue / Task Title</label>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-bold text-text-secondary uppercase tracking-wider">Issue / Task Title</label>
               <input
                 type="text"
                 required
                 placeholder="e.g. AC unit noisy compressor, Printer Jam"
-                className="form-input"
+                className="border border-border-color rounded-xl px-4 py-2.5 bg-white text-sm focus:outline-none focus:border-primary-orange text-text-primary font-medium"
                 value={taskForm.title}
                 onChange={(e) => setTaskForm({ ...taskForm, title: e.target.value })}
               />
             </div>
 
             {/* Description Subtext Input */}
-            <div className="form-group">
-              <label className="form-label">Details / Technician Name</label>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-bold text-text-secondary uppercase tracking-wider">Details / Technician Name</label>
               <input
                 type="text"
                 placeholder="e.g. Tech: R Varma, parts ordered"
-                className="form-input"
+                className="border border-border-color rounded-xl px-4 py-2.5 bg-white text-sm focus:outline-none focus:border-primary-orange text-text-primary font-medium"
                 value={taskForm.desc}
                 onChange={(e) => setTaskForm({ ...taskForm, desc: e.target.value })}
               />
             </div>
 
-            <div className="modal-actions">
+            <div className="flex justify-end gap-3 pt-3 border-t border-border-color mt-2">
               <button 
                 type="button" 
-                className="btn-cancel"
+                className="border border-border-color bg-white hover:bg-bg-gray text-text-primary text-xs font-extrabold py-2.5 px-5 rounded-xl transition cursor-pointer"
                 onClick={() => setShowAddModal(false)}
               >
                 Cancel
               </button>
-              <button type="submit" className="btn-submit">
+              <button type="submit" className="bg-primary-orange hover:bg-primary-orange-hover text-white text-xs font-extrabold py-2.5 px-6 rounded-xl transition shadow-sm cursor-pointer">
                 Create Card
               </button>
             </div>

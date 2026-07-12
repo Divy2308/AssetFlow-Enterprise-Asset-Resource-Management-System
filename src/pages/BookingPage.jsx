@@ -111,8 +111,6 @@ export default function BookingPage() {
 
     // Check for scheduling overlaps/conflicts
     const overlapExists = activeBookings.some((b) => {
-      // Direct overlap overlap definition: (newStart < existingEnd) && (newEnd > existingStart)
-      // and only check if it is not already a conflict card itself (we check overlaps against active bookings)
       return !b.isConflict && (startDec < b.end) && (endDec > b.start);
     });
 
@@ -140,66 +138,77 @@ export default function BookingPage() {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+    <div className="flex flex-col gap-6">
       
       {/* 1. Header Resource & Date Controls */}
-      <div className="booking-controls-row">
+      <div className="flex justify-between items-center gap-4 flex-wrap pb-1">
         
         {/* Left Side: Resource dropdown selection */}
-        <div className="booking-controls-left">
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <div className="icon-select-input" style={{ width: '280px' }}>
-              <span className="select-icon-left">
-                <CalendarIcon size={18} />
-              </span>
-              <select
-                value={selectedResource}
-                onChange={(e) => setSelectedResource(e.target.value)}
-              >
-                <option value="Conference Room 2">Conference Room 2</option>
-                <option value="Projector B">Projector B</option>
-                <option value="Training Room 1">Training Room 1</option>
-              </select>
-              <span className="select-chevron-right">
-                <ChevronDownIcon size={16} />
-              </span>
-            </div>
+        <div className="flex items-center gap-3">
+          <div className="relative w-72">
+            <span className="absolute left-4 top-3 text-text-secondary">
+              <CalendarIcon size={18} />
+            </span>
+            <select
+              value={selectedResource}
+              className="w-full border border-border-color bg-white pl-11 pr-10 py-3 rounded-xl text-sm font-semibold focus:outline-none focus:border-primary-orange text-text-primary appearance-none cursor-pointer"
+              onChange={(e) => setSelectedResource(e.target.value)}
+            >
+              <option value="Conference Room 2">Conference Room 2</option>
+              <option value="Projector B">Projector B</option>
+              <option value="Training Room 1">Training Room 1</option>
+            </select>
+            <span className="absolute right-4 top-3.5 text-text-secondary pointer-events-none">
+              <ChevronDownIcon size={16} />
+            </span>
           </div>
         </div>
 
         {/* Right Side: Date navigate buttons */}
-        <div className="booking-controls-right">
-          {/* Active Date visual display */}
-          <div className="date-display-box">
-            <CalendarIcon size={16} className="calendar-icon" />
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* Active Date display */}
+          <div className="flex items-center gap-2 bg-white border border-border-color py-2.5 px-4 rounded-xl text-sm font-bold text-text-primary shadow-sm select-none">
+            <CalendarIcon size={16} className="text-primary-orange" />
             <span>{formatDate(activeDate)}</span>
           </div>
 
           {/* Increment/Decrement Buttons */}
-          <button className="pagination-btn" onClick={handlePrevDay} aria-label="Previous day">
+          <button 
+            className="w-10 h-10 rounded-xl border border-border-color bg-white flex items-center justify-center transition hover:bg-bg-gray text-text-secondary hover:text-text-primary cursor-pointer"
+            onClick={handlePrevDay} 
+            aria-label="Previous day"
+          >
             <ChevronLeftIcon size={16} />
           </button>
-          <button className="pagination-btn" onClick={handleNextDay} aria-label="Next day">
+          <button 
+            className="w-10 h-10 rounded-xl border border-border-color bg-white flex items-center justify-center transition hover:bg-bg-gray text-text-secondary hover:text-text-primary cursor-pointer"
+            onClick={handleNextDay} 
+            aria-label="Next day"
+          >
             <ChevronRightIcon size={16} />
           </button>
         </div>
       </div>
 
       {/* 2. Schedule Grid Card */}
-      <div className="timeline-card">
-        <div className="timeline-container">
+      <div className="bg-white border border-border-color rounded-2xl p-6 shadow-sm flex flex-col gap-6">
+        <div className="relative border-l border-border-color ml-24" style={{ height: `${HOURS.length * hourHeight}px` }}>
           
           {/* Hour grid lines */}
           {HOURS.map((hr, idx) => (
-            <div key={idx} className="timeline-hour-row">
-              <span className="timeline-time-label">
+            <div 
+              key={idx} 
+              className="relative border-t border-border-color border-dashed first:border-t-0 w-full"
+              style={{ height: `${hourHeight}px` }}
+            >
+              <span className="absolute right-full mr-4 -top-3.5 text-[11px] font-bold text-text-secondary text-right select-none w-20">
                 {formatDecimalTime(hr)}
               </span>
             </div>
           ))}
 
           {/* Overlapping Slot items */}
-          <div className="booking-slot-container">
+          <div className="absolute inset-0">
             {activeBookings.map((slot) => {
               // Calculate top offset and height based on decimal start and end times
               const top = (slot.start - 9.0) * hourHeight;
@@ -215,22 +224,30 @@ export default function BookingPage() {
               return (
                 <div
                   key={slot.id}
-                  className={`booking-slot ${slot.isConflict ? 'conflict' : 'booked'}`}
+                  className={`absolute rounded-xl p-4 flex gap-3 text-left transition-all duration-300 shadow-xs border ${
+                    slot.isConflict 
+                      ? 'bg-red-50 border-alert-red-border/40 border-dashed text-alert-red-text' 
+                      : 'bg-primary-orange-light border-primary-orange-border/30 text-text-primary'
+                  }`}
                   style={{
                     top: `${top}px`,
-                    height: `${height - 4}px`, // Slight subtraction to provide a margin gap between blocks
+                    height: `${height - 4}px`, // Slight subtraction to provide a margin gap
                     left: leftStyle,
                     width: widthStyle
                   }}
                 >
-                  <div className="slot-icon">
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                    slot.isConflict ? 'bg-red-100 text-alert-red-text' : 'bg-[#FFF4EF] text-primary-orange'
+                  }`}>
                     <SlotIcon size={18} strokeWidth={2.4} />
                   </div>
-                  <div className="slot-content">
-                    <div className="slot-title">{slot.title}</div>
-                    <div className="slot-time">{slot.timeStr}</div>
+                  <div className="flex flex-col flex-grow">
+                    <div className={`text-xs font-extrabold ${slot.isConflict ? 'text-alert-red-text' : 'text-primary-orange'}`}>
+                      {slot.title}
+                    </div>
+                    <div className="text-[11px] font-bold text-text-secondary mt-0.5">{slot.timeStr}</div>
                     {slot.detail && (
-                      <div style={{ fontSize: '11px', fontWeight: '600', marginTop: '4px' }}>
+                      <div className="text-[10px] font-extrabold text-alert-red-text mt-1.5">
                         {slot.detail}
                       </div>
                     )}
@@ -243,11 +260,10 @@ export default function BookingPage() {
         </div>
 
         {/* Dynamic Booking Button */}
-        <div>
+        <div className="pt-2">
           <button
-            className="btn-primary-orange"
+            className="bg-primary-orange hover:bg-primary-orange-hover text-white text-sm font-extrabold py-3 px-6 rounded-xl transition shadow-sm cursor-pointer flex items-center gap-2"
             onClick={() => setShowBookingModal(true)}
-            style={{ padding: '12px 24px', borderRadius: '12px' }}
           >
             <CalendarIcon size={16} /> Book a slot
           </button>
@@ -255,51 +271,52 @@ export default function BookingPage() {
       </div>
 
       {/* 3. Disclaimer Footer Banner */}
-      <div className="info-banner">
-        <div className="info-banner-icon">
+      <div className="bg-primary-orange-light border border-primary-orange-border/20 rounded-2xl p-4 flex items-center gap-3">
+        <div className="text-primary-orange flex items-center shrink-0">
           <InfoIcon size={20} strokeWidth={2.4} />
         </div>
-        <p className="info-banner-text">
+        <p className="text-xs font-semibold text-primary-orange leading-relaxed m-0">
           You can view your bookings and requests in Reports &gt; My Bookings.
         </p>
       </div>
 
       {/* 4. Slot booking Overlay Modal */}
       {showBookingModal && (
-        <div className="modal-backdrop">
-          <form className="modal-card" onSubmit={handleBookingSubmit}>
-            <div className="modal-header">
-              <h3 className="modal-title">Book Resource Slot</h3>
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+          <form className="bg-white border border-border-color rounded-2xl shadow-xl max-w-md w-full overflow-hidden flex flex-col gap-5 p-6" onSubmit={handleBookingSubmit}>
+            <div className="flex justify-between items-center pb-3 border-b border-border-color">
+              <h3 className="font-heading text-base font-extrabold text-text-primary">Book Resource Slot</h3>
               <button 
                 type="button" 
-                className="modal-close-btn"
+                className="text-text-secondary hover:text-text-primary text-xl font-bold transition cursor-pointer"
                 onClick={() => setShowBookingModal(false)}
               >
                 &times;
               </button>
             </div>
 
-            <div className="form-group">
-              <label className="form-label">Team / Purpose</label>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-bold text-text-secondary uppercase tracking-wider">Team / Purpose</label>
               <input
                 type="text"
                 required
                 placeholder="e.g. Sales, Frontend sync"
-                className="form-input"
+                className="border border-border-color rounded-xl px-4 py-2.5 bg-white text-sm focus:outline-none focus:border-primary-orange text-text-primary font-medium"
                 value={newBookingForm.purpose}
                 onChange={(e) => setNewBookingForm({ ...newBookingForm, purpose: e.target.value })}
               />
             </div>
 
-            <div className="form-row">
-              <div className="form-group">
-                <label className="form-label">Start Time</label>
-                <div className="icon-select-input">
-                  <span className="select-icon-left">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold text-text-secondary uppercase tracking-wider">Start Time</label>
+                <div className="relative">
+                  <span className="absolute left-4 top-3 text-text-secondary">
                     <ClockIcon size={16} />
                   </span>
                   <select
                     value={newBookingForm.startStr}
+                    className="w-full border border-border-color bg-white pl-11 pr-10 py-2.5 rounded-xl text-sm font-semibold focus:outline-none focus:border-primary-orange text-text-primary appearance-none cursor-pointer"
                     onChange={(e) => setNewBookingForm({ ...newBookingForm, startStr: e.target.value })}
                   >
                     <option value="09:00 AM">09:00 AM</option>
@@ -313,20 +330,21 @@ export default function BookingPage() {
                     <option value="01:00 PM">01:00 PM</option>
                     <option value="01:30 PM">01:30 PM</option>
                   </select>
-                  <span className="select-chevron-right">
+                  <span className="absolute right-4 top-3 text-text-secondary pointer-events-none">
                     <ChevronDownIcon size={14} />
                   </span>
                 </div>
               </div>
 
-              <div className="form-group">
-                <label className="form-label">End Time</label>
-                <div className="icon-select-input">
-                  <span className="select-icon-left">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold text-text-secondary uppercase tracking-wider">End Time</label>
+                <div className="relative">
+                  <span className="absolute left-4 top-3 text-text-secondary">
                     <ClockIcon size={16} />
                   </span>
                   <select
                     value={newBookingForm.endStr}
+                    className="w-full border border-border-color bg-white pl-11 pr-10 py-2.5 rounded-xl text-sm font-semibold focus:outline-none focus:border-primary-orange text-text-primary appearance-none cursor-pointer"
                     onChange={(e) => setNewBookingForm({ ...newBookingForm, endStr: e.target.value })}
                   >
                     <option value="09:30 AM">09:30 AM</option>
@@ -340,22 +358,22 @@ export default function BookingPage() {
                     <option value="01:30 PM">01:30 PM</option>
                     <option value="02:00 PM">02:00 PM</option>
                   </select>
-                  <span className="select-chevron-right">
+                  <span className="absolute right-4 top-3 text-text-secondary pointer-events-none">
                     <ChevronDownIcon size={14} />
                   </span>
                 </div>
               </div>
             </div>
 
-            <div className="modal-actions">
+            <div className="flex justify-end gap-3 pt-3 border-t border-border-color mt-2">
               <button 
                 type="button" 
-                className="btn-cancel"
+                className="border border-border-color bg-white hover:bg-bg-gray text-text-primary text-xs font-extrabold py-2.5 px-5 rounded-xl transition cursor-pointer"
                 onClick={() => setShowBookingModal(false)}
               >
                 Cancel
               </button>
-              <button type="submit" className="btn-submit">
+              <button type="submit" className="bg-primary-orange hover:bg-primary-orange-hover text-white text-xs font-extrabold py-2.5 px-6 rounded-xl transition shadow-sm cursor-pointer">
                 Book Slot
               </button>
             </div>

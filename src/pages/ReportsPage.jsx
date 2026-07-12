@@ -7,7 +7,8 @@ import {
   WrenchIcon,
   LaptopIcon,
   UsersIcon,
-  BoxIcon
+  BoxIcon,
+  ChevronDownIcon
 } from '../components/Icons';
 
 export default function ReportsPage() {
@@ -77,9 +78,6 @@ export default function ReportsPage() {
   const getLinePath = (dataPoints) => {
     const pointsCount = dataPoints.length;
     const stepX = (lineChartWidth - linePaddingX * 2) / (pointsCount - 1);
-    
-    // Scale values so that max value (40) maps to lineChartHeight - linePaddingY (top border margin)
-    // 0 maps to lineChartHeight - linePaddingY
     const scaleY = (lineChartHeight - linePaddingY * 2) / 40;
 
     return dataPoints.map((val, idx) => {
@@ -109,33 +107,35 @@ export default function ReportsPage() {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+    <div className="flex flex-col gap-6">
       
       {/* Dynamic Sub-header Info & Top-Right Period Selectors */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '-8px', marginBottom: '8px', flexWrap: 'wrap', gap: '16px' }}>
-        <span style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: '600' }}>
+      <div className="flex justify-between items-center gap-4 flex-wrap pb-1 mt-[-16px]">
+        <span className="text-xs font-semibold text-text-secondary select-none">
           Track utilization, maintenance, and asset performance
         </span>
 
         {/* Date Selector and Filters triggers */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div className="icon-select-input" style={{ width: '220px' }}>
-            <span className="select-icon-left" style={{ color: 'var(--primary-orange)' }}>
+        <div className="flex items-center gap-3">
+          <div className="relative w-52">
+            <span className="absolute left-4 top-3 text-primary-orange">
               <CalendarIcon size={16} />
             </span>
             <select
               value={dateRange}
+              className="w-full border border-border-color bg-white pl-11 pr-10 py-2.5 rounded-xl text-xs font-bold text-text-primary focus:outline-none focus:border-primary-orange appearance-none cursor-pointer"
               onChange={(e) => setDateRange(e.target.value)}
-              style={{ paddingLeft: '42px', height: '42px', fontSize: '13px', fontWeight: '700' }}
             >
               <option value="1 - 15 Jul 2026">1 - 15 Jul 2026</option>
               <option value="16 - 30 Jul 2026">16 - 30 Jul 2026</option>
             </select>
+            <span className="absolute right-4 top-3.5 text-text-secondary pointer-events-none">
+              <ChevronDownIcon size={12} />
+            </span>
           </div>
 
           <button 
-            className="btn-outline-orange"
-            style={{ height: '42px', padding: '0 20px', borderRadius: '10px', fontSize: '13px', fontWeight: '700' }}
+            className="border border-primary-orange text-primary-orange hover:bg-primary-orange-light text-xs font-extrabold py-2.5 px-4 rounded-xl transition flex items-center gap-1.5 cursor-pointer shadow-xs bg-white"
             onClick={() => alert('Filter overlays drawer toggled')}
           >
             <SlidersIcon size={14} />
@@ -145,19 +145,22 @@ export default function ReportsPage() {
       </div>
 
       {/* 1. Charts Analytics Row */}
-      <div className="reports-charts-grid">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
         {/* Bar Chart Panel */}
-        <div className="chart-card">
-          <div className="chart-header">
-            <h3 className="chart-title">Utilization by Department</h3>
-            <select className="chart-select">
-              <option>This Month</option>
-            </select>
+        <div className="bg-white border border-border-color rounded-2xl p-6 shadow-sm flex flex-col gap-4">
+          <div className="flex justify-between items-center pb-2 border-b border-border-color">
+            <h3 className="font-heading text-sm font-extrabold text-text-primary">Utilization by Department</h3>
+            <div className="relative">
+              <select className="border border-border-color bg-white px-3 py-1 rounded-lg text-[11px] font-bold text-text-secondary focus:outline-none pr-6 cursor-pointer appearance-none">
+                <option>This Month</option>
+              </select>
+              <ChevronDownIcon size={10} className="absolute right-2 top-2.5 text-text-secondary pointer-events-none" />
+            </div>
           </div>
 
           {/* SVG Bar Chart Graphic */}
-          <div style={{ width: '100%', overflowX: 'auto' }}>
+          <div className="w-full overflow-x-auto">
             <svg viewBox={`0 0 ${barChartWidth} ${barChartHeight}`} width="100%" height="220" style={{ minWidth: '400px' }}>
               {/* Guidelines */}
               <line x1="50" y1="20" x2="480" y2="20" stroke="#F1F3F5" strokeWidth="1" />
@@ -183,7 +186,7 @@ export default function ReportsPage() {
                 const y = 190 - barHeight;
 
                 return (
-                  <g key={idx} className="chart-bar-group">
+                  <g key={idx} className="group">
                     {/* Orange Bar rect */}
                     <rect
                       x={x}
@@ -193,7 +196,7 @@ export default function ReportsPage() {
                       rx="4"
                       ry="4"
                       fill="var(--primary-orange)"
-                      style={{ transition: 'all 0.4s ease' }}
+                      className="transition-all duration-300 hover:fill-primary-orange-hover cursor-pointer"
                     />
                     {/* Count overlay label */}
                     <text
@@ -225,19 +228,21 @@ export default function ReportsPage() {
         </div>
 
         {/* Line Chart Panel */}
-        <div className="chart-card">
-          <div className="chart-header">
-            <h3 className="chart-title">Maintenance Frequency</h3>
-            <select className="chart-select">
-              <option>This Month</option>
-            </select>
+        <div className="bg-white border border-border-color rounded-2xl p-6 shadow-sm flex flex-col gap-4">
+          <div className="flex justify-between items-center pb-2 border-b border-border-color">
+            <h3 className="font-heading text-sm font-extrabold text-text-primary">Maintenance Frequency</h3>
+            <div className="relative">
+              <select className="border border-border-color bg-white px-3 py-1 rounded-lg text-[11px] font-bold text-text-secondary focus:outline-none pr-6 cursor-pointer appearance-none">
+                <option>This Month</option>
+              </select>
+              <ChevronDownIcon size={10} className="absolute right-2 top-2.5 text-text-secondary pointer-events-none" />
+            </div>
           </div>
 
           {/* SVG Line Chart Graphic */}
-          <div>
+          <div className="w-full overflow-x-auto">
             <svg viewBox={`0 0 ${lineChartWidth} ${lineChartHeight}`} width="100%" height="220">
               <defs>
-                {/* Area Gradient under curve */}
                 <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="var(--primary-orange)" stopOpacity="0.16" />
                   <stop offset="100%" stopColor="var(--primary-orange)" stopOpacity="0.0" />
@@ -262,7 +267,7 @@ export default function ReportsPage() {
               <path
                 d={getAreaPath(activeData.maintenanceLine)}
                 fill="url(#areaGradient)"
-                style={{ transition: 'all 0.4s ease' }}
+                className="transition-all duration-500"
               />
 
               {/* Main Line path */}
@@ -273,7 +278,7 @@ export default function ReportsPage() {
                 strokeWidth="3"
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                style={{ transition: 'all 0.4s ease' }}
+                className="transition-all duration-500"
               />
 
               {/* Node Circle Markers & X-Axis labels */}
@@ -287,17 +292,15 @@ export default function ReportsPage() {
 
                 return (
                   <g key={idx}>
-                    {/* Node Dot circle */}
                     <circle
                       cx={cx}
                       cy={cy}
-                      r="5"
+                      r="4.5"
                       fill="var(--primary-orange)"
                       stroke="#FFFFFF"
                       strokeWidth="2"
-                      style={{ transition: 'all 0.4s ease' }}
+                      className="transition-all duration-500"
                     />
-                    {/* X-Axis labels */}
                     <text
                       x={cx}
                       y="210"
@@ -318,76 +321,76 @@ export default function ReportsPage() {
       </div>
 
       {/* 2. Three Metric Statistics Row */}
-      <div className="report-metrics-row">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         
         {/* Card 1: Most Used Assets */}
-        <div className="report-metric-card">
-          <div className="metric-card-header">
-            <div className="metric-icon-box orange">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <div className="bg-white border border-border-color rounded-2xl p-5 shadow-sm flex flex-col gap-3">
+          <div className="flex items-center gap-3 border-b border-border-color pb-2 select-none">
+            <div className="w-8 h-8 rounded-lg bg-primary-orange-light text-primary-orange flex items-center justify-center shrink-0">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <circle cx="12" cy="12" r="10" />
                 <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" />
                 <path d="M2 12h20" />
               </svg>
             </div>
-            <h4 className="metric-card-title">Most Used Assets</h4>
+            <h4 className="font-heading text-xs font-extrabold text-text-primary">Most Used Assets</h4>
           </div>
-          <ul className="metric-card-list">
-            <li className="metric-card-item">
-              <span className="item-label">Room B2</span>
-              <span className="item-value">34 bookings</span>
+          <ul className="flex flex-col gap-2 list-none p-0 m-0">
+            <li className="flex justify-between items-center text-xs font-bold text-text-primary">
+              <span className="text-text-secondary font-medium">Room B2</span>
+              <span className="text-text-primary">34 bookings</span>
             </li>
-            <li className="metric-card-item">
-              <span className="item-label">Van AF-343</span>
-              <span className="item-value">21 trips</span>
+            <li className="flex justify-between items-center text-xs font-bold text-text-primary">
+              <span className="text-text-secondary font-medium">Van AF-343</span>
+              <span className="text-text-primary">21 trips</span>
             </li>
-            <li className="metric-card-item">
-              <span className="item-label">Projector AF-335</span>
-              <span className="item-value">18 uses</span>
+            <li className="flex justify-between items-center text-xs font-bold text-text-primary">
+              <span className="text-text-secondary font-medium">Projector AF-335</span>
+              <span className="text-text-primary">18 uses</span>
             </li>
           </ul>
         </div>
 
         {/* Card 2: Idle Assets */}
-        <div className="report-metric-card">
-          <div className="metric-card-header">
-            <div className="metric-icon-box purple">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <div className="bg-white border border-border-color rounded-2xl p-5 shadow-sm flex flex-col gap-3">
+          <div className="flex items-center gap-3 border-b border-border-color pb-2 select-none">
+            <div className="w-8 h-8 rounded-lg bg-purple-50 text-[#8A5CF5] flex items-center justify-center shrink-0">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <circle cx="12" cy="12" r="10" />
                 <polyline points="12 6 12 12 16 14" />
               </svg>
             </div>
-            <h4 className="metric-card-title">Idle Assets</h4>
+            <h4 className="font-heading text-xs font-extrabold text-text-primary">Idle Assets</h4>
           </div>
-          <ul className="metric-card-list">
-            <li className="metric-card-item">
-              <span className="item-label">Camera AF-0301</span>
-              <span className="item-value">60+ days</span>
+          <ul className="flex flex-col gap-2 list-none p-0 m-0">
+            <li className="flex justify-between items-center text-xs font-bold text-text-primary">
+              <span className="text-text-secondary font-medium">Camera AF-0301</span>
+              <span className="text-text-primary">60+ days</span>
             </li>
-            <li className="metric-card-item">
-              <span className="item-label">Chair AF-0410</span>
-              <span className="item-value">45 days</span>
+            <li className="flex justify-between items-center text-xs font-bold text-text-primary">
+              <span className="text-text-secondary font-medium">Chair AF-0410</span>
+              <span className="text-text-primary">45 days</span>
             </li>
-            <li className="metric-card-item">
-              <span className="item-label">Printer AF-2201</span>
-              <span className="item-value">30 days</span>
+            <li className="flex justify-between items-center text-xs font-bold text-text-primary">
+              <span className="text-text-secondary font-medium">Printer AF-2201</span>
+              <span className="text-text-primary">30 days</span>
             </li>
           </ul>
         </div>
 
         {/* Card 3: Total Bookings */}
-        <div className="report-metric-card" style={{ gap: '6px' }}>
-          <div className="metric-card-header">
-            <div className="metric-icon-box orange">
+        <div className="bg-white border border-border-color rounded-2xl p-5 shadow-sm flex flex-col justify-between min-h-[130px]">
+          <div className="flex items-center gap-3 border-b border-border-color pb-2 select-none">
+            <div className="w-8 h-8 rounded-lg bg-primary-orange-light text-primary-orange flex items-center justify-center shrink-0">
               <CalendarIcon size={16} />
             </div>
-            <h4 className="metric-card-title">Total Bookings (This Month)</h4>
+            <h4 className="font-heading text-xs font-extrabold text-text-primary">Total Bookings (This Month)</h4>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px' }}>
-            <span style={{ fontSize: '36px', fontWeight: '800', color: 'var(--text-primary)', lineHeight: 1 }}>
+          <div className="flex flex-col gap-1 mt-1">
+            <span className="text-3xl font-black text-text-primary leading-none">
               {activeData.bookingsCount}
             </span>
-            <span style={{ fontSize: '13px', fontWeight: '700', color: '#10B981', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <span className="text-[11px] font-extrabold text-success-green-text flex items-center gap-1 mt-0.5">
               {activeData.trend}
             </span>
           </div>
@@ -396,76 +399,69 @@ export default function ReportsPage() {
       </div>
 
       {/* 3. Bottom Grid: Maintenance due list and Export utilities */}
-      <div className="report-bottom-grid">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* Table layout of due items */}
-        <div className="table-card" style={{ marginBottom: 0 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '24px 24px 8px 24px' }}>
-            <h3 className="section-title" style={{ margin: 0, fontSize: '15px' }}>
+        <div className="bg-white border border-border-color rounded-2xl shadow-sm overflow-hidden flex flex-col gap-3 lg:col-span-2">
+          <div className="flex justify-between items-center p-4 pb-2">
+            <h3 className="font-heading text-sm font-extrabold text-text-primary m-0">
               Assets Due for Maintenance / Nearing Retirement
             </h3>
             <button 
-              className="btn-outline-orange"
-              style={{ padding: '6px 12px', fontSize: '12px', borderRadius: '6px' }}
+              className="border border-primary-orange text-primary-orange hover:bg-primary-orange-light text-xs font-extrabold py-1.5 px-3 rounded-lg transition cursor-pointer bg-white"
               onClick={() => alert('Viewing all due listings')}
             >
               View all
             </button>
           </div>
 
-          <table className="org-table">
-            <thead>
+          <table className="w-full border-collapse text-left">
+            <thead className="bg-bg-gray border-b border-border-color">
               <tr>
-                <th>Asset</th>
-                <th>Issue</th>
-                <th>Due In / Age</th>
-                <th>Status</th>
+                <th className="p-4 text-xs font-bold text-text-secondary uppercase tracking-wider">Asset</th>
+                <th className="p-4 text-xs font-bold text-text-secondary uppercase tracking-wider">Issue</th>
+                <th className="p-4 text-xs font-bold text-text-secondary uppercase tracking-wider">Due In / Age</th>
+                <th className="p-4 text-xs font-bold text-text-secondary uppercase tracking-wider">Status</th>
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{ width: '28px', height: '28px', borderRadius: '6px', backgroundColor: '#FFF4EF', color: '#FF5A1F', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <tr className="border-b border-border-color last:border-b-0">
+                <td className="p-4 text-sm font-medium text-text-primary">
+                  <div className="flex items-center gap-3">
+                    <div className="w-7 h-7 rounded-lg bg-primary-orange-light text-primary-orange flex items-center justify-center shrink-0">
                       <WrenchIcon size={14} />
                     </div>
-                    <span style={{ fontWeight: '700', fontSize: '13px' }}>Forklift AF-0087</span>
+                    <span className="font-bold text-xs text-text-primary">Forklift AF-0087</span>
                   </div>
                 </td>
-                <td>
-                  <span style={{ fontSize: '13px', fontWeight: '500', color: 'var(--text-primary)' }}>
-                    Service due in <span style={{ color: 'var(--alert-red-text)', fontWeight: '700' }}>5 days</span>
-                  </span>
+                <td className="p-4 text-xs font-semibold text-text-primary">
+                  Service due in <span className="text-alert-red-text font-bold">5 days</span>
                 </td>
-                <td>
-                  <span style={{ fontSize: '13px', fontWeight: '600' }}>5 days</span>
-                </td>
-                <td>
-                  <span className="status-badge pending" style={{ padding: '4px 8px', fontSize: '11px' }}>
+                <td className="p-4 text-xs font-bold text-text-primary">5 days</td>
+                <td className="p-4 text-sm font-medium text-text-primary">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border bg-orange-50 text-primary-orange border-primary-orange-border/20">
                     Due Soon
                   </span>
                 </td>
               </tr>
-              <tr>
-                <td>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{ width: '28px', height: '28px', borderRadius: '6px', backgroundColor: '#FFF4EF', color: '#FF5A1F', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <tr className="border-b border-border-color last:border-b-0">
+                <td className="p-4 text-sm font-medium text-text-primary">
+                  <div className="flex items-center gap-3">
+                    <div className="w-7 h-7 rounded-lg bg-primary-orange-light text-primary-orange flex items-center justify-center shrink-0">
                       <LaptopIcon size={14} />
                     </div>
-                    <span style={{ fontWeight: '700', fontSize: '13px' }}>Laptop AF-0020</span>
+                    <span className="font-bold text-xs text-text-primary">Laptop AF-0020</span>
                   </div>
                 </td>
-                <td>
-                  <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    <span style={{ fontSize: '13px', fontWeight: '500', color: 'var(--text-primary)' }}>4 years old</span>
-                    <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Nearing retirement</span>
+                <td className="p-4 text-xs font-semibold text-text-primary">
+                  <div className="flex flex-col gap-0.5">
+                    <span>4 years old</span>
+                    <span className="text-[10px] text-text-muted">Nearing retirement</span>
                   </div>
                 </td>
-                <td>
-                  <span style={{ fontSize: '13px', fontWeight: '600' }}>30 days</span>
-                </td>
-                <td>
-                  <span className="status-badge in-progress" style={{ padding: '4px 8px', fontSize: '11px', backgroundColor: '#F5F3FF', color: '#8A5CF5' }}>
+                <td className="p-4 text-xs font-bold text-text-primary">30 days</td>
+                <td className="p-4 text-sm font-medium text-text-primary">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border bg-purple-50 text-[#8A5CF5] border-purple-100">
                     Nearing Retirement
                   </span>
                 </td>
@@ -475,19 +471,19 @@ export default function ReportsPage() {
         </div>
 
         {/* Right side: Export utility */}
-        <div className="export-report-card">
-          <h4 className="chart-title" style={{ margin: 0 }}>Export Report</h4>
-          <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.4, margin: '2px 0' }}>
+        <div className="bg-white border border-border-color rounded-2xl p-6 shadow-sm flex flex-col justify-center gap-4 lg:col-span-1">
+          <h4 className="font-heading text-sm font-extrabold text-text-primary m-0">Export Report</h4>
+          <p className="text-xs font-semibold text-text-secondary leading-relaxed m-0">
             Download detailed reports for analysis and sharing.
           </p>
           <button 
-            className="btn-export-solid" 
+            className="bg-primary-orange hover:bg-primary-orange-hover text-white text-sm font-extrabold py-3.5 px-6 rounded-xl transition shadow-md cursor-pointer flex items-center justify-center gap-2 w-full disabled:opacity-40 disabled:cursor-not-allowed" 
             onClick={handleExport}
             disabled={exporting}
           >
             {exporting ? (
               <>
-                <svg className="animate-spin" style={{ width: '16px', height: '16px', color: '#FFF' }} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <svg className="animate-spin-custom w-4.5 h-4.5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
@@ -505,11 +501,11 @@ export default function ReportsPage() {
       </div>
 
       {/* 4. Footer Banner Info */}
-      <div className="info-banner" style={{ marginTop: '8px' }}>
-        <div className="info-banner-icon">
+      <div className="bg-primary-orange-light border border-primary-orange-border/20 rounded-2xl p-4 flex items-center gap-3">
+        <div className="text-primary-orange flex items-center shrink-0">
           <InfoIcon size={20} strokeWidth={2.4} />
         </div>
-        <p className="info-banner-text">
+        <p className="text-xs font-semibold text-primary-orange leading-relaxed m-0">
           Reports are updated in real-time. Use filters to view specific departments, asset categories, or time periods.
         </p>
       </div>

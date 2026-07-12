@@ -154,7 +154,7 @@ export default function OrgSetupPage() {
       };
     } else {
       return {
-        bg: '#FFF7ED', // light orange background
+        bg: '#FFF4EF', // light orange background
         color: '#FF5A1F',
         Icon: UsersIcon
       };
@@ -162,35 +162,47 @@ export default function OrgSetupPage() {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+    <div className="flex flex-col gap-6">
       
       {/* 1. Sub Tabs and Add Button Navigation Row */}
-      <div className="sub-tabs-row">
-        <ul className="sub-tabs-list">
+      <div className="flex justify-between items-center border-b border-border-color pb-3 gap-4 flex-wrap">
+        <ul className="flex gap-2 p-0 m-0 list-none">
           <li>
             <button
               onClick={() => { setActiveSubTab('departments'); setActiveDropdownRow(null); }}
-              className={`sub-tab-btn ${activeSubTab === 'departments' ? 'active' : ''}`}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold border transition duration-200 cursor-pointer ${
+                activeSubTab === 'departments'
+                  ? 'bg-primary-orange-light text-primary-orange border-primary-orange-border/30'
+                  : 'text-text-secondary hover:bg-bg-gray hover:text-text-primary border-transparent'
+              }`}
             >
-              <BuildingIcon size={16} className="tab-icon" />
+              <BuildingIcon size={16} />
               Departments
             </button>
           </li>
           <li>
             <button
               onClick={() => { setActiveSubTab('categories'); setActiveDropdownRow(null); }}
-              className={`sub-tab-btn ${activeSubTab === 'categories' ? 'active' : ''}`}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold border transition duration-200 cursor-pointer ${
+                activeSubTab === 'categories'
+                  ? 'bg-primary-orange-light text-primary-orange border-primary-orange-border/30'
+                  : 'text-text-secondary hover:bg-bg-gray hover:text-text-primary border-transparent'
+              }`}
             >
-              <TagIcon size={16} className="tab-icon" />
+              <TagIcon size={16} />
               Categories
             </button>
           </li>
           <li>
             <button
               onClick={() => { setActiveSubTab('employees'); setActiveDropdownRow(null); }}
-              className={`sub-tab-btn ${activeSubTab === 'employees' ? 'active' : ''}`}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold border transition duration-200 cursor-pointer ${
+                activeSubTab === 'employees'
+                  ? 'bg-primary-orange-light text-primary-orange border-primary-orange-border/30'
+                  : 'text-text-secondary hover:bg-bg-gray hover:text-text-primary border-transparent'
+              }`}
             >
-              <UsersIcon size={16} className="tab-icon" />
+              <UsersIcon size={16} />
               Employee
             </button>
           </li>
@@ -198,70 +210,74 @@ export default function OrgSetupPage() {
 
         {/* Dynamic Add Trigger */}
         <button
-          className="btn-add-primary"
+          className="bg-primary-orange hover:bg-primary-orange-hover text-white text-sm font-extrabold py-2.5 px-6 rounded-xl transition shadow-sm cursor-pointer flex items-center gap-1.5"
           onClick={() => setShowAddModal(true)}
         >
-          <span>+</span> Add
+          <span className="text-base font-normal">+</span> Add
         </button>
       </div>
 
       {/* 2. Responsive Structured Data Table Cards */}
-      <div className="data-table-card">
+      <div className="bg-white border border-border-color rounded-2xl shadow-sm overflow-hidden">
         {activeSubTab === 'departments' && (
-          <table className="data-table">
-            <thead>
+          <table className="w-full border-collapse text-left">
+            <thead className="bg-bg-gray border-b border-border-color">
               <tr>
-                <th style={{ width: '40%' }}>Department</th>
-                <th style={{ width: '25%' }}>Head</th>
-                <th style={{ width: '15%' }}>Parent Dept</th>
-                <th style={{ width: '15%' }}>Status</th>
-                <th style={{ width: '5%', textAlignment: 'center' }}></th>
+                <th className="p-4 text-xs font-bold text-text-secondary uppercase tracking-wider" style={{ width: '40%' }}>Department</th>
+                <th className="p-4 text-xs font-bold text-text-secondary uppercase tracking-wider" style={{ width: '25%' }}>Head</th>
+                <th className="p-4 text-xs font-bold text-text-secondary uppercase tracking-wider" style={{ width: '15%' }}>Parent Dept</th>
+                <th className="p-4 text-xs font-bold text-text-secondary uppercase tracking-wider" style={{ width: '15%' }}>Status</th>
+                <th className="p-4 text-xs font-bold text-text-secondary uppercase tracking-wider w-[5%] text-center"></th>
               </tr>
             </thead>
             <tbody>
               {departments.map((dept) => {
                 const config = getDeptIconConfig(dept.type);
                 return (
-                  <tr key={dept.id}>
-                    <td>
-                      <div className="dept-cell-wrap">
+                  <tr key={dept.id} className="border-b border-border-color last:border-b-0 hover:bg-bg-gray/30 transition-all">
+                    <td className="p-4 text-sm font-medium text-text-primary">
+                      <div className="flex items-center gap-3">
                         {/* Custom visual avatar container */}
                         <div 
-                          className="dept-icon-box"
+                          className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
                           style={{ backgroundColor: config.bg, color: config.color }}
                         >
                           <config.Icon size={18} />
                         </div>
-                        <span className="dept-name">{dept.name}</span>
+                        <span className="font-bold text-text-primary">{dept.name}</span>
                       </div>
                     </td>
-                    <td style={{ textTransform: 'capitalize' }}>{dept.head}</td>
-                    <td>{dept.parent}</td>
-                    <td>
-                      <span className={`status-badge ${dept.status === 'Active' ? 'active' : 'inactive'}`}>
-                        <span className="status-dot"></span>
+                    <td className="p-4 text-sm font-medium text-text-primary capitalize">{dept.head}</td>
+                    <td className="p-4 text-sm font-medium text-text-primary">{dept.parent}</td>
+                    <td className="p-4 text-sm font-medium text-text-primary">
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border ${
+                        dept.status === 'Active'
+                          ? 'bg-success-green-bg text-success-green-text border-success-green-border/30'
+                          : 'bg-red-50 text-alert-red-text border-alert-red-border/20'
+                      }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${dept.status === 'Active' ? 'bg-success-green-text' : 'bg-alert-red-text'}`} />
                         {dept.status}
                       </span>
                     </td>
-                    <td>
+                    <td className="p-4 text-sm font-medium text-text-primary">
                       {/* Row actions dots dropdown */}
-                      <div className="action-menu-container" ref={activeDropdownRow === dept.id ? dropdownRef : null}>
+                      <div className="relative" ref={activeDropdownRow === dept.id ? dropdownRef : null}>
                         <button
-                          className="action-dots-btn"
+                          className="w-8 h-8 rounded-lg text-text-secondary hover:bg-bg-gray hover:text-text-primary flex items-center justify-center transition cursor-pointer"
                           onClick={() => setActiveDropdownRow(activeDropdownRow === dept.id ? null : dept.id)}
                         >
                           <MoreVerticalIcon size={16} />
                         </button>
                         {activeDropdownRow === dept.id && (
-                          <div className="action-dropdown-menu">
+                          <div className="absolute right-0 mt-1 w-40 bg-white border border-border-color rounded-xl shadow-lg z-20 py-1">
                             <button 
-                              className="action-dropdown-item"
+                              className="w-full text-left px-4 py-2.5 text-xs font-bold text-text-secondary hover:bg-bg-gray hover:text-text-primary transition"
                               onClick={() => handleToggleStatus(dept.id)}
                             >
                               Toggle Status
                             </button>
                             <button 
-                              className="action-dropdown-item danger"
+                              className="w-full text-left px-4 py-2.5 text-xs font-bold text-alert-red-text hover:bg-red-50 transition"
                               onClick={() => handleDeleteItem(dept.id)}
                             >
                               Delete
@@ -278,56 +294,57 @@ export default function OrgSetupPage() {
         )}
 
         {activeSubTab === 'categories' && (
-          <table className="data-table">
-            <thead>
+          <table className="w-full border-collapse text-left">
+            <thead className="bg-bg-gray border-b border-border-color">
               <tr>
-                <th style={{ width: '30%' }}>Category Name</th>
-                <th style={{ width: '20%' }}>Code Prefix</th>
-                <th style={{ width: '30%' }}>Description</th>
-                <th style={{ width: '15%' }}>Status</th>
-                <th style={{ width: '5%' }}></th>
+                <th className="p-4 text-xs font-bold text-text-secondary uppercase tracking-wider" style={{ width: '30%' }}>Category Name</th>
+                <th className="p-4 text-xs font-bold text-text-secondary uppercase tracking-wider" style={{ width: '20%' }}>Code Prefix</th>
+                <th className="p-4 text-xs font-bold text-text-secondary uppercase tracking-wider" style={{ width: '30%' }}>Description</th>
+                <th className="p-4 text-xs font-bold text-text-secondary uppercase tracking-wider" style={{ width: '15%' }}>Status</th>
+                <th className="p-4 text-xs font-bold text-text-secondary uppercase tracking-wider w-[5%]"></th>
               </tr>
             </thead>
             <tbody>
               {categories.map((cat) => (
-                <tr key={cat.id}>
-                  <td>
-                    <div className="dept-cell-wrap">
-                      <div 
-                        className="dept-icon-box"
-                        style={{ backgroundColor: '#FFF4EF', color: '#FF5A1F' }}
-                      >
+                <tr key={cat.id} className="border-b border-border-color last:border-b-0 hover:bg-bg-gray/30 transition-all">
+                  <td className="p-4 text-sm font-medium text-text-primary">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 bg-primary-orange-light text-primary-orange">
                         <TagIcon size={18} />
                       </div>
-                      <span className="dept-name">{cat.name}</span>
+                      <span className="font-bold text-text-primary">{cat.name}</span>
                     </div>
                   </td>
-                  <td><code>{cat.prefix}</code></td>
-                  <td>{cat.desc}</td>
-                  <td>
-                    <span className={`status-badge ${cat.status === 'Active' ? 'active' : 'inactive'}`}>
-                      <span className="status-dot"></span>
+                  <td className="p-4 text-sm font-medium text-text-primary"><code className="bg-bg-gray border border-border-color px-2 py-1 rounded text-xs font-mono">{cat.prefix}</code></td>
+                  <td className="p-4 text-sm font-medium text-text-primary">{cat.desc}</td>
+                  <td className="p-4 text-sm font-medium text-text-primary">
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border ${
+                      cat.status === 'Active'
+                        ? 'bg-success-green-bg text-success-green-text border-success-green-border/30'
+                        : 'bg-red-50 text-alert-red-text border-alert-red-border/20'
+                    }`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${cat.status === 'Active' ? 'bg-success-green-text' : 'bg-alert-red-text'}`} />
                       {cat.status}
                     </span>
                   </td>
-                  <td>
-                    <div className="action-menu-container" ref={activeDropdownRow === cat.id ? dropdownRef : null}>
+                  <td className="p-4 text-sm font-medium text-text-primary">
+                    <div className="relative" ref={activeDropdownRow === cat.id ? dropdownRef : null}>
                       <button
-                        className="action-dots-btn"
+                        className="w-8 h-8 rounded-lg text-text-secondary hover:bg-bg-gray hover:text-text-primary flex items-center justify-center transition cursor-pointer"
                         onClick={() => setActiveDropdownRow(activeDropdownRow === cat.id ? null : cat.id)}
                       >
                         <MoreVerticalIcon size={16} />
                       </button>
                       {activeDropdownRow === cat.id && (
-                        <div className="action-dropdown-menu">
+                        <div className="absolute right-0 mt-1 w-40 bg-white border border-border-color rounded-xl shadow-lg z-20 py-1">
                           <button 
-                            className="action-dropdown-item"
+                            className="w-full text-left px-4 py-2.5 text-xs font-bold text-text-secondary hover:bg-bg-gray hover:text-text-primary transition"
                             onClick={() => handleToggleStatus(cat.id)}
                           >
                             Toggle Status
                           </button>
                           <button 
-                            className="action-dropdown-item danger"
+                            className="w-full text-left px-4 py-2.5 text-xs font-bold text-alert-red-text hover:bg-red-50 transition"
                             onClick={() => handleDeleteItem(cat.id)}
                           >
                             Delete
@@ -343,56 +360,57 @@ export default function OrgSetupPage() {
         )}
 
         {activeSubTab === 'employees' && (
-          <table className="data-table">
-            <thead>
+          <table className="w-full border-collapse text-left">
+            <thead className="bg-bg-gray border-b border-border-color">
               <tr>
-                <th style={{ width: '35%' }}>Employee Name</th>
-                <th style={{ width: '25%' }}>Department</th>
-                <th style={{ width: '20%' }}>Manager / Head</th>
-                <th style={{ width: '15%' }}>Status</th>
-                <th style={{ width: '5%' }}></th>
+                <th className="p-4 text-xs font-bold text-text-secondary uppercase tracking-wider" style={{ width: '35%' }}>Employee Name</th>
+                <th className="p-4 text-xs font-bold text-text-secondary uppercase tracking-wider" style={{ width: '25%' }}>Department</th>
+                <th className="p-4 text-xs font-bold text-text-secondary uppercase tracking-wider" style={{ width: '20%' }}>Manager / Head</th>
+                <th className="p-4 text-xs font-bold text-text-secondary uppercase tracking-wider" style={{ width: '15%' }}>Status</th>
+                <th className="p-4 text-xs font-bold text-text-secondary uppercase tracking-wider w-[5%]"></th>
               </tr>
             </thead>
             <tbody>
               {employees.map((emp) => (
-                <tr key={emp.id}>
-                  <td>
-                    <div className="dept-cell-wrap">
-                      <div 
-                        className="dept-icon-box"
-                        style={{ backgroundColor: '#EEF2F6', color: '#5F646D' }}
-                      >
+                <tr key={emp.id} className="border-b border-border-color last:border-b-0 hover:bg-bg-gray/30 transition-all">
+                  <td className="p-4 text-sm font-medium text-text-primary">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 bg-[#EEF2F6] text-[#5F646D]">
                         <UsersIcon size={18} />
                       </div>
-                      <span className="dept-name">{emp.name}</span>
+                      <span className="font-bold text-text-primary">{emp.name}</span>
                     </div>
                   </td>
-                  <td>{emp.dept}</td>
-                  <td style={{ textTransform: 'capitalize' }}>{emp.head}</td>
-                  <td>
-                    <span className={`status-badge ${emp.status === 'Active' ? 'active' : 'inactive'}`}>
-                      <span className="status-dot"></span>
+                  <td className="p-4 text-sm font-medium text-text-primary">{emp.dept}</td>
+                  <td className="p-4 text-sm font-medium text-text-primary capitalize">{emp.head}</td>
+                  <td className="p-4 text-sm font-medium text-text-primary">
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border ${
+                      emp.status === 'Active'
+                        ? 'bg-success-green-bg text-success-green-text border-success-green-border/30'
+                        : 'bg-red-50 text-alert-red-text border-alert-red-border/20'
+                    }`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${emp.status === 'Active' ? 'bg-success-green-text' : 'bg-alert-red-text'}`} />
                       {emp.status}
                     </span>
                   </td>
-                  <td>
-                    <div className="action-menu-container" ref={activeDropdownRow === emp.id ? dropdownRef : null}>
+                  <td className="p-4 text-sm font-medium text-text-primary">
+                    <div className="relative" ref={activeDropdownRow === emp.id ? dropdownRef : null}>
                       <button
-                        className="action-dots-btn"
+                        className="w-8 h-8 rounded-lg text-text-secondary hover:bg-bg-gray hover:text-text-primary flex items-center justify-center transition cursor-pointer"
                         onClick={() => setActiveDropdownRow(activeDropdownRow === emp.id ? null : emp.id)}
                       >
                         <MoreVerticalIcon size={16} />
                       </button>
                       {activeDropdownRow === emp.id && (
-                        <div className="action-dropdown-menu">
+                        <div className="absolute right-0 mt-1 w-40 bg-white border border-border-color rounded-xl shadow-lg z-20 py-1">
                           <button 
-                            className="action-dropdown-item"
+                            className="w-full text-left px-4 py-2.5 text-xs font-bold text-text-secondary hover:bg-bg-gray hover:text-text-primary transition"
                             onClick={() => handleToggleStatus(emp.id)}
                           >
                             Toggle Status
                           </button>
                           <button 
-                            className="action-dropdown-item danger"
+                            className="w-full text-left px-4 py-2.5 text-xs font-bold text-alert-red-text hover:bg-red-50 transition"
                             onClick={() => handleDeleteItem(emp.id)}
                           >
                             Delete
@@ -409,26 +427,26 @@ export default function OrgSetupPage() {
       </div>
 
       {/* 3. Orange Information Alert Banner (placed below the table card) */}
-      <div className="info-banner">
-        <div className="info-banner-icon">
+      <div className="bg-primary-orange-light border border-primary-orange-border/20 rounded-2xl p-4 flex items-center gap-3">
+        <div className="text-primary-orange flex items-center shrink-0">
           <InfoIcon size={20} strokeWidth={2.4} />
         </div>
-        <p className="info-banner-text">
+        <p className="text-xs font-semibold text-primary-orange leading-relaxed m-0">
           Editing a department here also drives the picklist in Screen 4 & 5
         </p>
       </div>
 
       {/* 4. Interactive Create Modal Popup */}
       {showAddModal && (
-        <div className="modal-backdrop">
-          <form className="modal-card" onSubmit={handleFormSubmit}>
-            <div className="modal-header">
-              <h3 className="modal-title">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+          <form className="bg-white border border-border-color rounded-2xl shadow-xl max-w-md w-full overflow-hidden flex flex-col gap-5 p-6" onSubmit={handleFormSubmit}>
+            <div className="flex justify-between items-center pb-3 border-b border-border-color">
+              <h3 className="font-heading text-base font-extrabold text-text-primary">
                 Add {activeSubTab === 'departments' ? 'Department' : activeSubTab === 'categories' ? 'Category' : 'Employee'}
               </h3>
               <button 
                 type="button" 
-                className="modal-close-btn"
+                className="text-text-secondary hover:text-text-primary text-xl font-bold transition cursor-pointer"
                 onClick={() => setShowAddModal(false)}
               >
                 &times;
@@ -438,32 +456,32 @@ export default function OrgSetupPage() {
             {/* A. DEPARTMENT FORM */}
             {activeSubTab === 'departments' && (
               <>
-                <div className="form-group">
-                  <label className="form-label">Department Name</label>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-text-secondary uppercase tracking-wider">Department Name</label>
                   <input
                     type="text"
                     required
                     placeholder="e.g. Sales, Operations"
-                    className="form-input"
+                    className="border border-border-color rounded-xl px-4 py-2.5 bg-white text-sm focus:outline-none focus:border-primary-orange text-text-primary font-medium"
                     value={deptForm.name}
                     onChange={(e) => setDeptForm({ ...deptForm, name: e.target.value })}
                   />
                 </div>
-                <div className="form-group">
-                  <label className="form-label">Department Head</label>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-text-secondary uppercase tracking-wider">Department Head</label>
                   <input
                     type="text"
                     required
-                    placeholder="Head of Department full name"
-                    className="form-input"
+                    placeholder="Head of Department name"
+                    className="border border-border-color rounded-xl px-4 py-2.5 bg-white text-sm focus:outline-none focus:border-primary-orange text-text-primary font-medium"
                     value={deptForm.head}
                     onChange={(e) => setDeptForm({ ...deptForm, head: e.target.value })}
                   />
                 </div>
-                <div className="form-group">
-                  <label className="form-label">Parent Department</label>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-text-secondary uppercase tracking-wider">Parent Department</label>
                   <select
-                    className="form-select"
+                    className="border border-border-color rounded-xl px-4 py-2.5 bg-white text-sm focus:outline-none focus:border-primary-orange text-text-primary font-medium"
                     value={deptForm.parent}
                     onChange={(e) => setDeptForm({ ...deptForm, parent: e.target.value })}
                   >
@@ -473,10 +491,10 @@ export default function OrgSetupPage() {
                     <option value="Administration">Administration</option>
                   </select>
                 </div>
-                <div className="form-group">
-                  <label className="form-label">Initial Status</label>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-text-secondary uppercase tracking-wider">Initial Status</label>
                   <select
-                    className="form-select"
+                    className="border border-border-color rounded-xl px-4 py-2.5 bg-white text-sm focus:outline-none focus:border-primary-orange text-text-primary font-medium"
                     value={deptForm.status}
                     onChange={(e) => setDeptForm({ ...deptForm, status: e.target.value })}
                   >
@@ -490,42 +508,42 @@ export default function OrgSetupPage() {
             {/* B. CATEGORY FORM */}
             {activeSubTab === 'categories' && (
               <>
-                <div className="form-group">
-                  <label className="form-label">Category Name</label>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-text-secondary uppercase tracking-wider">Category Name</label>
                   <input
                     type="text"
                     required
                     placeholder="e.g. Network Devices"
-                    className="form-input"
+                    className="border border-border-color rounded-xl px-4 py-2.5 bg-white text-sm focus:outline-none focus:border-primary-orange text-text-primary font-medium"
                     value={catForm.name}
                     onChange={(e) => setCatForm({ ...catForm, name: e.target.value })}
                   />
                 </div>
-                <div className="form-group">
-                  <label className="form-label">Code Prefix</label>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-text-secondary uppercase tracking-wider">Code Prefix</label>
                   <input
                     type="text"
                     required
                     placeholder="e.g. NET-DV"
-                    className="form-input"
+                    className="border border-border-color rounded-xl px-4 py-2.5 bg-white text-sm focus:outline-none focus:border-primary-orange text-text-primary font-medium"
                     value={catForm.prefix}
                     onChange={(e) => setCatForm({ ...catForm, prefix: e.target.value })}
                   />
                 </div>
-                <div className="form-group">
-                  <label className="form-label">Description</label>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-text-secondary uppercase tracking-wider">Description</label>
                   <input
                     type="text"
                     placeholder="Brief description of the asset type"
-                    className="form-input"
+                    className="border border-border-color rounded-xl px-4 py-2.5 bg-white text-sm focus:outline-none focus:border-primary-orange text-text-primary font-medium"
                     value={catForm.desc}
                     onChange={(e) => setCatForm({ ...catForm, desc: e.target.value })}
                   />
                 </div>
-                <div className="form-group">
-                  <label className="form-label">Initial Status</label>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-text-secondary uppercase tracking-wider">Initial Status</label>
                   <select
-                    className="form-select"
+                    className="border border-border-color rounded-xl px-4 py-2.5 bg-white text-sm focus:outline-none focus:border-primary-orange text-text-primary font-medium"
                     value={catForm.status}
                     onChange={(e) => setCatForm({ ...catForm, status: e.target.value })}
                   >
@@ -539,21 +557,21 @@ export default function OrgSetupPage() {
             {/* C. EMPLOYEE FORM */}
             {activeSubTab === 'employees' && (
               <>
-                <div className="form-group">
-                  <label className="form-label">Employee Name</label>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-text-secondary uppercase tracking-wider">Employee Name</label>
                   <input
                     type="text"
                     required
                     placeholder="Full Name"
-                    className="form-input"
+                    className="border border-border-color rounded-xl px-4 py-2.5 bg-white text-sm focus:outline-none focus:border-primary-orange text-text-primary font-medium"
                     value={empForm.name}
                     onChange={(e) => setEmpForm({ ...empForm, name: e.target.value })}
                   />
                 </div>
-                <div className="form-group">
-                  <label className="form-label">Department</label>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-text-secondary uppercase tracking-wider">Department</label>
                   <select
-                    className="form-select"
+                    className="border border-border-color rounded-xl px-4 py-2.5 bg-white text-sm focus:outline-none focus:border-primary-orange text-text-primary font-medium"
                     value={empForm.dept}
                     onChange={(e) => setEmpForm({ ...empForm, dept: e.target.value })}
                   >
@@ -562,21 +580,21 @@ export default function OrgSetupPage() {
                     ))}
                   </select>
                 </div>
-                <div className="form-group">
-                  <label className="form-label">Reporting Manager / Head</label>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-text-secondary uppercase tracking-wider">Reporting Manager / Head</label>
                   <input
                     type="text"
                     required
                     placeholder="Manager Name"
-                    className="form-input"
+                    className="border border-border-color rounded-xl px-4 py-2.5 bg-white text-sm focus:outline-none focus:border-primary-orange text-text-primary font-medium"
                     value={empForm.head}
                     onChange={(e) => setEmpForm({ ...empForm, head: e.target.value })}
                   />
                 </div>
-                <div className="form-group">
-                  <label className="form-label">Initial Status</label>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-text-secondary uppercase tracking-wider">Initial Status</label>
                   <select
-                    className="form-select"
+                    className="border border-border-color rounded-xl px-4 py-2.5 bg-white text-sm focus:outline-none focus:border-primary-orange text-text-primary font-medium"
                     value={empForm.status}
                     onChange={(e) => setEmpForm({ ...empForm, status: e.target.value })}
                   >
@@ -587,15 +605,15 @@ export default function OrgSetupPage() {
               </>
             )}
 
-            <div className="modal-actions">
+            <div className="flex justify-end gap-3 pt-3 border-t border-border-color mt-2">
               <button 
                 type="button" 
-                className="btn-cancel"
+                className="border border-border-color bg-white hover:bg-bg-gray text-text-primary text-xs font-extrabold py-2.5 px-5 rounded-xl transition cursor-pointer"
                 onClick={() => setShowAddModal(false)}
               >
                 Cancel
               </button>
-              <button type="submit" className="btn-submit">
+              <button type="submit" className="bg-primary-orange hover:bg-primary-orange-hover text-white text-xs font-extrabold py-2.5 px-6 rounded-xl transition shadow-sm cursor-pointer">
                 Add Record
               </button>
             </div>

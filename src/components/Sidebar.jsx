@@ -26,50 +26,39 @@ const menuItems = [
 
 export default function Sidebar({ activeTab, onTabChange, unreadCount = 0 }) {
   return (
-    <aside className="sidebar">
+    <aside className="w-64 bg-white border-r border-border-color flex flex-col justify-between p-6 shrink-0 h-screen sticky top-0">
       <div>
         {/* Brand Logo */}
-        <div className="logo-container">
-          <BoxIcon size={28} className="logo-orange" />
-          <span className="logo-text">
-            Asset<span className="logo-orange">Flow</span>
+        <div className="flex items-center gap-3 mb-8">
+          <BoxIcon size={28} className="text-primary-orange" />
+          <span className="font-heading text-xl font-extrabold text-text-primary tracking-tight">
+            Asset<span className="text-primary-orange">Flow</span>
           </span>
         </div>
 
         {/* Navigation Items */}
         <nav>
-          <ul className="nav-list">
+          <ul className="flex flex-col gap-1 p-0 m-0 list-none">
             {menuItems.map((item) => {
               const isInterfaceActive = activeTab === item.id;
               return (
                 <li key={item.id}>
                   <button
                     onClick={() => onTabChange(item.id)}
-                    className={`nav-item-btn ${isInterfaceActive ? 'active' : ''}`}
-                    style={{ width: '100%', display: 'flex', alignItems: 'center' }}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 text-left border ${
+                      isInterfaceActive
+                        ? 'bg-primary-orange-light text-primary-orange border-primary-orange-border/30'
+                        : 'text-text-secondary hover:bg-bg-gray hover:text-text-primary border-transparent'
+                    }`}
                   >
-                    <span className="nav-icon">
+                    <span className="flex items-center justify-center shrink-0">
                       <item.Icon size={18} />
                     </span>
-                    <span style={{ flexGrow: 1, textAlign: 'left' }}>
+                    <span className="flex-grow text-left">
                       {item.label}
                     </span>
                     {item.id === 'notifications' && unreadCount > 0 && (
-                      <span
-                        style={{
-                          backgroundColor: 'var(--primary-orange)',
-                          color: 'white',
-                          fontSize: '10px',
-                          fontWeight: '800',
-                          borderRadius: '50%',
-                          width: '18px',
-                          height: '18px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          flexShrink: 0
-                        }}
-                      >
+                      <span className="bg-primary-orange text-white text-[10px] font-extrabold rounded-full w-5 h-5 flex items-center justify-center shrink-0 shadow-sm">
                         {unreadCount}
                       </span>
                     )}
@@ -82,15 +71,18 @@ export default function Sidebar({ activeTab, onTabChange, unreadCount = 0 }) {
       </div>
 
       {/* Sidebar Promo Call to Action */}
-      <div className="promo-card">
+      <div className="bg-gradient-to-br from-primary-orange-light to-white border border-primary-orange-border/20 rounded-2xl p-5 text-center mt-6 flex flex-col items-center">
         <img
           src={heroImg}
           alt="Manage Assets illustration"
-          className="promo-image"
-          style={{ width: '130px', height: 'auto', marginBottom: '8px' }}
+          className="w-[120px] h-auto mb-3"
         />
-        <h4 className="promo-title">Manage your assets smarter and faster</h4>
-        <button className="promo-btn">Learn more</button>
+        <h4 className="text-xs font-bold text-text-primary mb-3 leading-snug">
+          Manage your assets smarter and faster
+        </h4>
+        <button className="w-full bg-primary-orange hover:bg-primary-orange-hover text-white text-xs font-extrabold py-2.5 px-4 rounded-xl transition-all duration-200 shadow-sm cursor-pointer">
+          Learn more
+        </button>
       </div>
     </aside>
   );
