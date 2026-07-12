@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { MailIcon, EyeIcon, EyeOffIcon, LockIcon, UserIcon } from '../components/Icons';
+import { MailIcon, EyeIcon, EyeOffIcon, LockIcon, UserIcon, ShieldIcon } from '../components/Icons';
 import { supabase } from '../config/supabaseClient';
 import promoImg from '../assets/sidebar_promo.jpg';
+import { devLogin, DEV_ACCOUNTS } from '../utils/devAuth';
+import { ROLE_LABELS, ROLE_BADGE_STYLES, ROLES } from '../utils/permissions';
 
 // Self-contained UserPlusIcon for the signup card
 const UserPlusIcon = (props) => (
@@ -56,7 +58,7 @@ export default function LoginPage({ onLogin }) {
           .insert([{
             name: fullName,
             email: email,
-            role: 'EMPLOYEE',
+            role: 'employee',
             status: 'Active'
           }]);
         if (employeeError) throw employeeError;
@@ -66,6 +68,14 @@ export default function LoginPage({ onLogin }) {
         setFullName('');
       } else {
         // Sign In
+        // Try dev login first (checks against DEV_ACCOUNTS in localStorage)
+        const devResult = devLogin(email, password);
+        if (devResult.success) {
+           window.location.reload();
+           return;
+        }
+
+        // Fallback to Supabase Auth
         const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password
@@ -77,6 +87,13 @@ export default function LoginPage({ onLogin }) {
       alert('Authentication failed: ' + error.message);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleDevQuickLogin = (account) => {
+    const res = devLogin(account.email, account.password);
+    if (res.success) {
+      window.location.reload();
     }
   };
 
@@ -232,6 +249,42 @@ export default function LoginPage({ onLogin }) {
           </span>
           <div className="border-t border-border-color flex-grow" />
         </div>
+
+        {/* Dev Fast Login Options */}
+        {!isSignUp && (
+          <div className="flex flex-col gap-2.5 animate-in fade-in duration-300">
+            <h4 className="text-[11px] font-extrabold text-text-secondary tracking-wide uppercase text-center mb-1">
+              Dev Fast Login
+            </h4>
+            <div className="grid grid-cols-2 gap-2">
+              {DEV_ACCOUNTS.map((acc) => {
+                const styles = ROLE_BADGE_STYLES[acc.role] || ROLE_BADGE_STYLES[ROLES.EMPLOYEE];
+                return (
+                  <button
+                    key={acc.role}
+                    type="button"
+                    onClick={() => handleDevQuickLogin(acc)}
+                    className={`flex flex-col items-start gap-1 p-3 rounded-xl border border-border-color hover:border-primary-orange transition text-left bg-white shadow-sm hover:shadow-md cursor-pointer`}
+                  >
+                    <div className="flex items-center gap-1.5 w-full">
+                      <ShieldIcon size={14} className={styles.text} />
+                      <span className={`text-[10px] font-extrabold uppercase tracking-wider ${styles.text}`}>
+                        {ROLE_LABELS[acc.role]}
+                      </span>
+                    </div>
+                    <span className="text-xs font-bold text-text-primary mt-1">{acc.name}</span>
+                    <span className="text-[10px] text-text-muted font-medium truncate w-full">{acc.email}</span>
+                  </button>
+                );
+              })}
+            </div>
+            
+             <div className="flex items-center justify-center my-1 select-none pt-2">
+               <div className="border-t border-border-color flex-grow" />
+               <div className="border-t border-border-color flex-grow" />
+             </div>
+          </div>
+        )}
 
         {/* 6. Toggle Sign In / Sign Up buttons */}
         <div className="flex flex-col gap-4">

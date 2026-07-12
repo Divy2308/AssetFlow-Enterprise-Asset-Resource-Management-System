@@ -19,6 +19,7 @@ import { supabase } from './config/supabaseClient';
 import { RoleProvider, useUserRole } from './context/RoleContext';
 import RequireRole, { AccessDeniedBlock } from './components/RequireRole';
 import { ROLES } from './utils/permissions';
+import { hasDevSession, devLogout } from './utils/devAuth';
 
 // List of tabs and their titles for dynamic header updates
 const TAB_LABELS = {
@@ -64,7 +65,12 @@ function AppShell({ notifications, setNotifications, assets, setAssets }) {
           unreadCount={unreadCount}
           onNotificationClick={() => setActiveTab('notifications')}
           onLogout={async () => {
-            await supabase.auth.signOut();
+            if (hasDevSession()) {
+              devLogout();
+              window.location.reload();
+            } else {
+              await supabase.auth.signOut();
+            }
           }}
           userName={loading ? '…' : (name || 'User')}
         />
@@ -129,8 +135,15 @@ function App() {
   const [notifications, setNotifications] = useState([]);
   const [assets, setAssets] = useState([]);
 
-  // 1. Listen for Supabase Auth state changes
+  // 1. Listen for Supabase Auth state changes (and check Dev Auth)
   useEffect(() => {
+    // Check dev session first
+    if (hasDevSession()) {
+      setSession({ isDev: true }); // Mock session object
+      setSessionLoading(false);
+      return; // Skip Supabase auth listener if using dev session
+    }
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setSessionLoading(false);
@@ -141,7 +154,7 @@ function App() {
       setSessionLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => subscription?.unsubscribe();
   }, []);
 
   // 2. Load global data on active session

@@ -22,26 +22,9 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../config/supabaseClient';
 import { ROLES } from '../utils/permissions';
+import { getDevSession, hasDevSession } from '../utils/devAuth';
 
-// ──────────────────────────────────────────────
-// Dev mock fallback
-// Set VITE_DEV_MOCK_ROLE=admin (or any role) in .env.local
-// to develop without a real Supabase session.
-// ──────────────────────────────────────────────
-const DEV_MOCK_ROLE = import.meta.env.VITE_DEV_MOCK_ROLE || null;
-
-const DEV_MOCK_USER = DEV_MOCK_ROLE
-  ? {
-      role:         DEV_MOCK_ROLE,
-      employeeId:   0,
-      departmentId: null,
-      name:         `Dev ${DEV_MOCK_ROLE}`,
-      email:        `dev_${DEV_MOCK_ROLE}@assetflow.dev`,
-      loading:      false,
-      error:        null,
-      isMock:       true,
-    }
-  : null;
+// Dev session is now managed by devAuth.js using localStorage
 
 // ──────────────────────────────────────────────
 // Hook
@@ -62,15 +45,27 @@ export function useCurrentUser() {
     let mounted = true;
 
     const fetchUser = async (session) => {
-      if (!session) {
-        // No session: use dev mock if configured, else unauthenticated state
+      // 1. Check for Dev Session First
+      if (hasDevSession()) {
+        const devUser = getDevSession();
         if (mounted) {
-          setState(
-            DEV_MOCK_USER || {
-              role: null, employeeId: null, departmentId: null,
-              name: null, email: null, loading: false, error: null, isMock: false,
-            }
-          );
+          setState({
+            ...devUser,
+            loading: false,
+            error: null,
+            isMock: true,
+          });
+        }
+        return;
+      }
+
+      // 2. Check for Supabase Session
+      if (!session) {
+        if (mounted) {
+          setState({
+            role: null, employeeId: null, departmentId: null,
+            name: null, email: null, loading: false, error: null, isMock: false,
+          });
         }
         return;
       }
