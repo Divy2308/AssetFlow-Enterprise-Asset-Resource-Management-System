@@ -11,6 +11,8 @@ import {
   ChairIcon,
   BoxIcon
 } from '../components/Icons';
+import RequireRole from '../components/RequireRole';
+import { ROLES } from '../utils/permissions';
 
 export default function AllocationPage({ assets, setAssets }) {
   // 1. Selected Asset State - defaults to AF-0114 (id: 4) if present
@@ -244,90 +246,100 @@ export default function AllocationPage({ assets, setAssets }) {
           </div>
         )}
 
-        {/* C. Transfer Request Form Panel */}
-        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-          <h3 className="font-heading text-sm font-extrabold text-text-primary border-b border-border-color pb-2">
-            {isAllocated ? 'Transfer Request' : 'Direct Allocation'}
-          </h3>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* From Selector */}
-            <div className="flex flex-col gap-2">
-              <label className="text-xs font-bold text-text-secondary uppercase tracking-wider">From</label>
-              <div className="relative">
-                <span className="absolute left-4 top-3 text-text-secondary">
-                  <UserIcon size={18} />
-                </span>
-                <select 
-                  disabled 
-                  value="owner"
-                  className="w-full border border-border-color bg-[#F8FAFC]/60 pl-11 pr-10 py-3 rounded-xl text-sm font-semibold focus:outline-none text-text-secondary appearance-none cursor-not-allowed"
-                >
-                  <option value="owner">
-                    {isAllocated ? currentOwner : 'N/A - Direct Allocation'}
-                  </option>
-                </select>
-                <span className="absolute right-4 top-3.5 text-text-muted pointer-events-none">
-                  <ChevronDownIcon size={16} />
-                </span>
+        {/* C. Transfer Request Form Panel — admin/asset_manager only */}
+        <RequireRole
+          allow={[ROLES.ADMIN, ROLES.ASSET_MANAGER]}
+          fallback={
+            <div className="bg-bg-gray border border-border-color rounded-xl p-4 text-xs font-semibold text-text-secondary flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+              Only Asset Managers and Admins can submit allocation or transfer requests.
+            </div>
+          }
+        >
+          <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+            <h3 className="font-heading text-sm font-extrabold text-text-primary border-b border-border-color pb-2">
+              {isAllocated ? 'Transfer Request' : 'Direct Allocation'}
+            </h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* From Selector */}
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-bold text-text-secondary uppercase tracking-wider">From</label>
+                <div className="relative">
+                  <span className="absolute left-4 top-3 text-text-secondary">
+                    <UserIcon size={18} />
+                  </span>
+                  <select 
+                    disabled 
+                    value="owner"
+                    className="w-full border border-border-color bg-[#F8FAFC]/60 pl-11 pr-10 py-3 rounded-xl text-sm font-semibold focus:outline-none text-text-secondary appearance-none cursor-not-allowed"
+                  >
+                    <option value="owner">
+                      {isAllocated ? currentOwner : 'N/A - Direct Allocation'}
+                    </option>
+                  </select>
+                  <span className="absolute right-4 top-3.5 text-text-muted pointer-events-none">
+                    <ChevronDownIcon size={16} />
+                  </span>
+                </div>
+              </div>
+
+              {/* To Selector */}
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-bold text-text-secondary uppercase tracking-wider">To</label>
+                <div className="relative">
+                  <span className="absolute left-4 top-3 text-text-secondary">
+                    <UserIcon size={18} />
+                  </span>
+                  <select
+                    required
+                    value={targetEmployee}
+                    className="w-full border border-border-color bg-white pl-11 pr-10 py-3 rounded-xl text-sm font-semibold focus:outline-none focus:border-primary-orange text-text-primary appearance-none cursor-pointer"
+                    onChange={(e) => setTargetEmployee(e.target.value)}
+                  >
+                    <option value="">Select Employee...</option>
+                    {localEmployeesList
+                      .filter((e) => e.name !== currentOwner)
+                      .map((emp, idx) => (
+                        <option key={idx} value={emp.name}>
+                          {emp.name} ({emp.dept})
+                        </option>
+                      ))}
+                  </select>
+                  <span className="absolute right-4 top-3.5 text-text-secondary pointer-events-none">
+                    <ChevronDownIcon size={16} />
+                  </span>
+                </div>
               </div>
             </div>
 
-            {/* To Selector */}
+            {/* Reason Field */}
             <div className="flex flex-col gap-2">
-              <label className="text-xs font-bold text-text-secondary uppercase tracking-wider">To</label>
+              <label className="text-xs font-bold text-text-secondary uppercase tracking-wider">Reason</label>
               <div className="relative">
-                <span className="absolute left-4 top-3 text-text-secondary">
-                  <UserIcon size={18} />
-                </span>
-                <select
+                <textarea
+                  className="w-full border border-border-color bg-white px-4 py-3 rounded-xl text-sm font-medium focus:outline-none focus:border-primary-orange text-text-primary min-h-[100px] placeholder:text-text-muted resize-none"
                   required
-                  value={targetEmployee}
-                  className="w-full border border-border-color bg-white pl-11 pr-10 py-3 rounded-xl text-sm font-semibold focus:outline-none focus:border-primary-orange text-text-primary appearance-none cursor-pointer"
-                  onChange={(e) => setTargetEmployee(e.target.value)}
-                >
-                  <option value="">Select Employee...</option>
-                  {localEmployeesList
-                    .filter((e) => e.name !== currentOwner)
-                    .map((emp, idx) => (
-                      <option key={idx} value={emp.name}>
-                        {emp.name} ({emp.dept})
-                      </option>
-                    ))}
-                </select>
-                <span className="absolute right-4 top-3.5 text-text-secondary pointer-events-none">
-                  <ChevronDownIcon size={16} />
+                  maxLength={300}
+                  placeholder="Enter reason for transfer..."
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                />
+                <span className="absolute bottom-3 right-4 text-[10px] font-extrabold text-text-muted">
+                  {reason.length} / 300
                 </span>
               </div>
             </div>
-          </div>
 
-          {/* Reason Field */}
-          <div className="flex flex-col gap-2">
-            <label className="text-xs font-bold text-text-secondary uppercase tracking-wider">Reason</label>
-            <div className="relative">
-              <textarea
-                className="w-full border border-border-color bg-white px-4 py-3 rounded-xl text-sm font-medium focus:outline-none focus:border-primary-orange text-text-primary min-h-[100px] placeholder:text-text-muted resize-none"
-                required
-                maxLength={300}
-                placeholder="Enter reason for transfer..."
-                value={reason}
-                onChange={(e) => setReason(e.target.value)}
-              />
-              <span className="absolute bottom-3 right-4 text-[10px] font-extrabold text-text-muted">
-                {reason.length} / 300
-              </span>
+            {/* Submit Action Button */}
+            <div className="pt-2">
+              <button type="submit" className="bg-primary-orange hover:bg-primary-orange-hover text-white text-sm font-extrabold py-3 px-6 rounded-xl transition shadow-sm cursor-pointer flex items-center gap-2">
+                <SendIcon size={16} />
+                Submit Request
+              </button>
             </div>
-          </div>
-
-          {/* Submit Action Button */}
-          <div className="pt-2">
-            <button type="submit" className="bg-primary-orange hover:bg-primary-orange-hover text-white text-sm font-extrabold py-3 px-6 rounded-xl transition shadow-sm cursor-pointer flex items-center gap-2">
-              <SendIcon size={16} />
-              Submit Request
-            </button>
-          </div>
-        </form>
+          </form>
+        </RequireRole>
       </div>
 
       {/* D. Allocation History Log Feed */}

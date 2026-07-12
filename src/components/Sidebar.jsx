@@ -11,26 +11,49 @@ import {
   BellIcon
 } from './Icons';
 import promoImg from '../assets/sidebar_promo.jpg';
+import { useUserRole } from '../context/RoleContext';
+import { hasPermission } from '../utils/permissions';
 
+// menuItems: each entry declares a `permission` key (from permissions.js)
+// that must be true for the current role to see the item.
+// Items without a `permission` key are visible to all authenticated users.
 const menuItems = [
   { id: '/', label: 'Dashboard', Icon: BoxIcon },
-  { id: '/org-setup', label: 'Organization setup', Icon: OrgSetupIcon },
-  { id: '/asset', label: 'Assets', Icon: AssetsIcon },
-  { id: '/allocation', label: 'Allocation & Transfer', Icon: TransferIcon },
-  { id: '/booking', label: 'Resource Booking', Icon: CalendarIcon },
-  { id: '/maintenance', label: 'Maintenance', Icon: WrenchIcon },
-  { id: '/audit', label: 'Audit', Icon: ShieldIcon },
-  { id: '/reports', label: 'Reports', Icon: ReportsIcon },
-  { id: '/notifications', label: 'Notifications', Icon: BellIcon }
+  { id: '/org-setup', label: 'Organization setup', Icon: OrgSetupIcon }, // visible to all roles
+  { id: '/asset', label: 'Assets', Icon: AssetsIcon, permission: 'nav_assets' },
+  { id: '/allocation', label: 'Allocation & Transfer', Icon: TransferIcon, permission: 'nav_allocation' },
+  { id: '/booking', label: 'Resource Booking', Icon: CalendarIcon, permission: 'nav_booking' },
+  { id: '/maintenance', label: 'Maintenance', Icon: WrenchIcon, permission: 'nav_maintenance' },
+  { id: '/audit', label: 'Audit', Icon: ShieldIcon, permission: 'nav_audit' },
+  { id: '/reports', label: 'Reports', Icon: ReportsIcon, permission: 'nav_reports' },
+  { id: '/notifications', label: 'Notifications', Icon: BellIcon, permission: 'nav_notifications' }
 ];
 
-export default function Sidebar({ activeTab, onTabChange, unreadCount = 0, userRole = 'EMPLOYEE' }) {
+export default function Sidebar({ activeTab, onTabChange, unreadCount = 0 }) {
+  // Role comes from context — no prop drilling needed
+  const { role, loading } = useUserRole();
+
+  // Filter menu items based on the current user's role.
+  // While role is loading, show only items without a permission requirement
+  // to avoid a flash of a full menu before filtering kicks in.
+  const visibleItems = menuItems.filter((item) => {
+    if (!item.permission) return true;                  // always visible
+    if (loading) return false;                          // hide gated items while loading
+    return hasPermission(role, item.permission);
+  });
+
   return (
     <aside className="w-64 bg-white border-r border-border-color flex flex-col justify-between p-6 shrink-0 h-screen sticky top-0">
       <div>
         {/* Brand Logo */}
-        <div className="flex items-center gap-3 mb-8">
-          <BoxIcon size={28} className="text-primary-orange" />
+        <div className="flex items-center gap-3.5 mb-8 select-none">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="shrink-0 animate-pulse-slow">
+            <path d="M12 2L3 7v10l9 5 9-5V7l-9-5z" stroke="#FF5A1F" strokeWidth="2.5" strokeLinejoin="round" />
+            <path d="M12 22V12" stroke="#FF5A1F" strokeWidth="2.5" />
+            <path d="M12 12L3 7" stroke="#FF5A1F" strokeWidth="2.5" />
+            <path d="M12 12l9-5" stroke="#FF5A1F" strokeWidth="2.5" />
+            <circle cx="12" cy="12" r="3" fill="#FF5A1F" />
+          </svg>
           <span className="font-heading text-xl font-extrabold text-text-primary tracking-tight">
             Asset<span className="text-primary-orange">Flow</span>
           </span>
@@ -39,12 +62,7 @@ export default function Sidebar({ activeTab, onTabChange, unreadCount = 0, userR
         {/* Navigation Items */}
         <nav>
           <ul className="flex flex-col gap-1 p-0 m-0 list-none">
-            {menuItems
-              .filter((item) => {
-                if (item.id === '/org-setup' && userRole !== 'ADMIN') return false;
-                return true;
-              })
-              .map((item) => {
+            {visibleItems.map((item) => {
               const isInterfaceActive = activeTab === item.id;
               return (
                 <li key={item.id}>

@@ -10,8 +10,13 @@ import {
   BuildingIcon,
   ChevronRightIcon
 } from '../components/Icons';
+import { useUserRole } from '../context/RoleContext';
+import { ROLES, ROLE_LABELS, ROLE_BADGE_STYLES } from '../utils/permissions';
 
 export default function OrgSetupPage() {
+  const { role: currentUserRole } = useUserRole();
+  const isAdmin = currentUserRole === ROLES.ADMIN;
+
   const [activeSubTab, setActiveSubTab] = useState('departments');
   const [showAddModal, setShowAddModal] = useState(false);
   const [activeDropdownRow, setActiveDropdownRow] = useState(null); // Track open actions menu row id
@@ -48,6 +53,15 @@ export default function OrgSetupPage() {
   const [employees, setEmployees] = useState([]);
   const [empForm, setEmpForm] = useState({ name: '', dept: 'Engineering', head: '', status: 'Active' });
 
+  // ----------------------------------------------------
+  // Promote Modal State (admin only)
+  // ----------------------------------------------------
+  const [showPromoteModal, setShowPromoteModal] = useState(false);
+  const [promoteTarget, setPromoteTarget] = useState(null);   // { id, name, role }
+  const [promoteRole, setPromoteRole] = useState(ROLES.ASSET_MANAGER);
+  const [promoteLoading, setPromoteLoading] = useState(false);
+  const [promoteError, setPromoteError] = useState(null);
+
   // 1. Fetch departments, categories, and employees from Supabase on mount
   useEffect(() => {
     const loadOrgSetupData = async () => {
@@ -77,14 +91,16 @@ export default function OrgSetupPage() {
           })));
         }
 
-        // Load employees
-        const { data: emps } = await supabase.from('employees').select('*');
+        // Load employees — include role column
+        const { data: emps } = await supabase.from('employees').select('id, name, email, role, department_id, status');
         if (emps) {
           setEmployees(emps.map(e => ({
             id: e.id,
             name: e.name,
+            email: e.email,
             dept: e.department_id ? `Dept #${e.department_id}` : '—',
             head: '—',
+            role: e.role || ROLES.EMPLOYEE,
             status: e.status
           })));
         }
@@ -155,7 +171,7 @@ export default function OrgSetupPage() {
         .insert([{ 
           name: empForm.name, 
           email, 
-          role: 'EMPLOYEE',
+          role: 'employee',    // lowercase — matches user_role enum; DB trigger enforces this
           department_id: departmentId
         }])
         .select();
@@ -168,8 +184,10 @@ export default function OrgSetupPage() {
           {
             id: data[0].id,
             name: data[0].name,
+            email: data[0].email,
             dept: empForm.dept,
             head: empForm.head.toLowerCase(),
+            role: data[0].role || ROLES.EMPLOYEE,
             status: data[0].status
           }
         ]);
@@ -217,6 +235,69 @@ export default function OrgSetupPage() {
       }
     }
     setActiveDropdownRow(null);
+  };
+
+  // ----------------------------------------------------
+  // Promote Employee handler
+  // ----------------------------------------------------
+  const openPromoteModal = (emp) => {
+    setPromoteTarget(emp);
+    // Default to asset_manager if current role is employee/dept_head, else dept_head
+    setPromoteRole(
+      emp.role === ROLES.EMPLOYEE ? ROLES.ASSET_MANAGER : ROLES.DEPARTMENT_HEAD
+    );
+    setPromoteError(null);
+    setShowPromoteModal(true);
+    setActiveDropdownRow(null);
+  };
+
+  const handlePromote = async () => {
+    if (!promoteTarget) return;
+    setPromoteLoading(true);
+    setPromoteError(null);
+
+    try {
+      const { data, error } = await supabase.rpc('promote_employee', {
+        target_employee_id: promoteTarget.id,
+        new_role: promoteRole
+      });
+
+      if (error) {
+        setPromoteError(error.message);
+        return;
+      }
+
+      // The RPC returns a JSONB payload
+      const result = data;
+      if (!result?.success) {
+        setPromoteError(result?.error || 'Promotion failed. Check RPC response.');
+        return;
+      }
+
+      // Update local state
+      setEmployees(employees.map(e =>
+        e.id === promoteTarget.id ? { ...e, role: promoteRole } : e
+      ));
+
+      setShowPromoteModal(false);
+      setPromoteTarget(null);
+      alert(`${promoteTarget.name} has been promoted to ${ROLE_LABELS[promoteRole]}.`);
+    } catch (err) {
+      setPromoteError(err.message || 'Unexpected error during promotion.');
+    } finally {
+      setPromoteLoading(false);
+    }
+  };
+
+  // ─── Role badge renderer ────────────────────────────────────
+  const renderRoleBadge = (role) => {
+    const styles = ROLE_BADGE_STYLES[role] || ROLE_BADGE_STYLES[ROLES.EMPLOYEE];
+    return (
+      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border ${styles.bg} ${styles.text} ${styles.border}`}>
+        <span className={`w-1.5 h-1.5 rounded-full ${styles.dot}`} />
+        {ROLE_LABELS[role] || role}
+      </span>
+    );
   };
 
   // Utility to render avatar containers matching mockup colors
@@ -444,10 +525,11 @@ export default function OrgSetupPage() {
           <table className="w-full border-collapse text-left">
             <thead className="bg-bg-gray border-b border-border-color">
               <tr>
-                <th className="p-4 text-xs font-bold text-text-secondary uppercase tracking-wider" style={{ width: '35%' }}>Employee Name</th>
-                <th className="p-4 text-xs font-bold text-text-secondary uppercase tracking-wider" style={{ width: '25%' }}>Department</th>
-                <th className="p-4 text-xs font-bold text-text-secondary uppercase tracking-wider" style={{ width: '20%' }}>Manager / Head</th>
-                <th className="p-4 text-xs font-bold text-text-secondary uppercase tracking-wider" style={{ width: '15%' }}>Status</th>
+                <th className="p-4 text-xs font-bold text-text-secondary uppercase tracking-wider" style={{ width: '30%' }}>Employee Name</th>
+                <th className="p-4 text-xs font-bold text-text-secondary uppercase tracking-wider" style={{ width: '20%' }}>Department</th>
+                <th className="p-4 text-xs font-bold text-text-secondary uppercase tracking-wider" style={{ width: '18%' }}>Role</th>
+                <th className="p-4 text-xs font-bold text-text-secondary uppercase tracking-wider" style={{ width: '17%' }}>Manager / Head</th>
+                <th className="p-4 text-xs font-bold text-text-secondary uppercase tracking-wider" style={{ width: '10%' }}>Status</th>
                 <th className="p-4 text-xs font-bold text-text-secondary uppercase tracking-wider w-[5%]"></th>
               </tr>
             </thead>
@@ -459,10 +541,17 @@ export default function OrgSetupPage() {
                       <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 bg-[#EEF2F6] text-[#5F646D]">
                         <UsersIcon size={18} />
                       </div>
-                      <span className="font-bold text-text-primary">{emp.name}</span>
+                      <div className="flex flex-col">
+                        <span className="font-bold text-text-primary">{emp.name}</span>
+                        {emp.email && <span className="text-[10px] text-text-muted font-medium">{emp.email}</span>}
+                      </div>
                     </div>
                   </td>
                   <td className="p-4 text-sm font-medium text-text-primary">{emp.dept}</td>
+                  {/* Role badge column */}
+                  <td className="p-4">
+                    {renderRoleBadge(emp.role)}
+                  </td>
                   <td className="p-4 text-sm font-medium text-text-primary capitalize">{emp.head}</td>
                   <td className="p-4 text-sm font-medium text-text-primary">
                     <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border ${
@@ -483,7 +572,17 @@ export default function OrgSetupPage() {
                         <MoreVerticalIcon size={16} />
                       </button>
                       {activeDropdownRow === emp.id && (
-                        <div className="absolute right-0 mt-1 w-40 bg-white border border-border-color rounded-xl shadow-lg z-20 py-1">
+                        <div className="absolute right-0 mt-1 w-44 bg-white border border-border-color rounded-xl shadow-lg z-20 py-1">
+                          {/* Promote — visible to admin only */}
+                          {isAdmin && emp.role !== ROLES.ADMIN && (
+                            <button 
+                              className="w-full text-left px-4 py-2.5 text-xs font-bold text-purple-700 hover:bg-purple-50 transition flex items-center gap-2"
+                              onClick={() => openPromoteModal(emp)}
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m18 15-6-6-6 6"/></svg>
+                              Promote Role
+                            </button>
+                          )}
                           <button 
                             className="w-full text-left px-4 py-2.5 text-xs font-bold text-text-secondary hover:bg-bg-gray hover:text-text-primary transition"
                             onClick={() => handleToggleStatus(emp.id)}
@@ -699,6 +798,114 @@ export default function OrgSetupPage() {
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {/* ── Promote Employee Modal ───────────────────────────── */}
+      {showPromoteModal && promoteTarget && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+          <div className="bg-white border border-border-color rounded-2xl shadow-xl max-w-sm w-full overflow-hidden flex flex-col gap-0">
+
+            {/* Header */}
+            <div className="flex justify-between items-center p-5 border-b border-border-color">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-purple-100 text-purple-700 shrink-0">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m18 15-6-6-6 6"/></svg>
+                </div>
+                <div>
+                  <h3 className="font-heading text-sm font-extrabold text-text-primary">Promote Employee</h3>
+                  <p className="text-[11px] font-semibold text-text-secondary">{promoteTarget.name}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="text-text-secondary hover:text-text-primary text-xl font-bold transition cursor-pointer"
+                onClick={() => { setShowPromoteModal(false); setPromoteError(null); }}
+              >
+                &times;
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-5 flex flex-col gap-4">
+              {/* Current role display */}
+              <div className="flex items-center justify-between bg-bg-gray rounded-xl p-3">
+                <span className="text-xs font-bold text-text-secondary">Current Role</span>
+                {renderRoleBadge(promoteTarget.role)}
+              </div>
+
+              {/* New role picker */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold text-text-secondary uppercase tracking-wider">Promote To</label>
+                <div className="flex flex-col gap-2">
+                  {[ROLES.ASSET_MANAGER, ROLES.DEPARTMENT_HEAD].map((r) => (
+                    <label
+                      key={r}
+                      className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition ${
+                        promoteRole === r
+                          ? 'border-primary-orange bg-primary-orange-light'
+                          : 'border-border-color hover:bg-bg-gray'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="promoteRole"
+                        value={r}
+                        checked={promoteRole === r}
+                        onChange={() => setPromoteRole(r)}
+                        className="accent-primary-orange"
+                      />
+                      <div className="flex flex-col">
+                        <span className="text-xs font-extrabold text-text-primary">{ROLE_LABELS[r]}</span>
+                        <span className="text-[10px] font-semibold text-text-secondary">
+                          {r === ROLES.ASSET_MANAGER
+                            ? 'Can register/allocate assets and approve maintenance'
+                            : 'Can view & approve transfers in their department'}
+                        </span>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Error message */}
+              {promoteError && (
+                <div className="bg-red-50 border border-alert-red-border/20 rounded-xl p-3 text-xs font-semibold text-alert-red-text">
+                  {promoteError}
+                </div>
+              )}
+
+              {/* Warning notice */}
+              <div className="bg-primary-orange-light border border-primary-orange-border/20 rounded-xl p-3 text-[11px] font-semibold text-primary-orange">
+                ⚠ This action is logged in the role change audit trail and cannot be silently undone.
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="flex justify-end gap-3 p-5 pt-0">
+              <button
+                type="button"
+                className="border border-border-color bg-white hover:bg-bg-gray text-text-primary text-xs font-extrabold py-2.5 px-5 rounded-xl transition cursor-pointer"
+                onClick={() => { setShowPromoteModal(false); setPromoteError(null); }}
+                disabled={promoteLoading}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="bg-purple-600 hover:bg-purple-700 disabled:opacity-60 text-white text-xs font-extrabold py-2.5 px-6 rounded-xl transition shadow-sm cursor-pointer flex items-center gap-2"
+                onClick={handlePromote}
+                disabled={promoteLoading || promoteRole === promoteTarget.role}
+              >
+                {promoteLoading ? (
+                  <>
+                    <svg className="animate-spin" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+                    Promoting…
+                  </>
+                ) : 'Confirm Promotion'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

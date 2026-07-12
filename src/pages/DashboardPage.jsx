@@ -1,4 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useUserRole } from '../context/RoleContext';
+import { hasPermission } from '../utils/permissions';
 import OverviewCard from '../components/OverviewCard';
 import QuickActions from '../components/QuickActions';
 import RecentActivity from '../components/RecentActivity';
@@ -15,6 +18,8 @@ import {
 } from '../components/Icons';
 
 export default function DashboardPage() {
+  const navigate = useNavigate();
+  const { role } = useUserRole();
   const [counts, setCounts] = useState({
     available: 0,
     allocated: 0,
@@ -72,10 +77,22 @@ export default function DashboardPage() {
     { label: 'Upcoming returns', value: counts.returns.toString(), Icon: RefreshIcon, fillPercent: 42 }
   ];
 
-  // Callback mock handlers for quick actions
-  const handleRegisterAsset = () => alert('Please use the sidebar "Asset Register" menu to register items.');
-  const handleBookResource = () => alert('Please use the sidebar "Resource Booking" menu to allocate timeslots.');
-  const handleRaiseRequests = () => alert('Please use the sidebar "Maintenance" menu to raise requests.');
+  // Redirect quick actions to their respective route paths (only if permitted)
+  const handleRegisterAsset = () => {
+    if (hasPermission(role, 'nav_assets')) {
+      navigate('/asset');
+    }
+  };
+  const handleBookResource = () => {
+    if (hasPermission(role, 'nav_booking')) {
+      navigate('/booking');
+    }
+  };
+  const handleRaiseRequests = () => {
+    if (hasPermission(role, 'nav_maintenance')) {
+      navigate('/maintenance');
+    }
+  };
 
   return (
     <div className="flex flex-col gap-6">
