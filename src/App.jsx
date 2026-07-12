@@ -186,16 +186,7 @@ function App() {
           <Routes>
             <Route path="/" element={<DashboardPage />} />
             
-            <Route 
-              path="/org-setup" 
-              element={
-                currentUser?.role === 'ADMIN' ? (
-                  <OrgSetupPage />
-                ) : (
-                  <Navigate to="/" replace />
-                )
-              } 
-            />
+            <Route path="/org-setup" element={<OrgSetupPage />} />
 
             <Route path="/asset" element={<AssetsPage assets={assets} setAssets={setAssets} />} />
             <Route path="/allocation" element={<AllocationPage assets={assets} setAssets={setAssets} />} />

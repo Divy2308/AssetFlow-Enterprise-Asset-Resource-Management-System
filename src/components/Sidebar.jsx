@@ -39,12 +39,7 @@ export default function Sidebar({ activeTab, onTabChange, unreadCount = 0, userR
         {/* Navigation Items */}
         <nav>
           <ul className="flex flex-col gap-1 p-0 m-0 list-none">
-            {menuItems
-              .filter((item) => {
-                if (item.id === '/org-setup' && userRole !== 'ADMIN') return false;
-                return true;
-              })
-              .map((item) => {
+            {menuItems.map((item) => {
               const isInterfaceActive = activeTab === item.id;
               return (
                 <li key={item.id}>
