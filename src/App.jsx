@@ -12,19 +12,25 @@ import AuditPage from './pages/AuditPage';
 import ReportsPage from './pages/ReportsPage';
 import NotificationsPage from './pages/NotificationsPage';
 import LoginPage from './pages/LoginPage';
+import LearnMorePage from './pages/LearnMorePage';
+import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
+import TermsPage from './pages/TermsPage';
 import { supabase } from './config/supabaseClient';
 
 // List of tabs and their titles for dynamic header updates
 const TAB_LABELS = {
-  'dashboard': 'Screen 2', // Default title as displayed in mockup
-  'org-setup': 'Screen 3  Organization setup (Admin only)',
-  'assets': 'Screen 4  Asset registrations and directory',
-  'allocation': 'Screen 5  Asset allocation & Transfer (the double-allocation block in action)',
-  'booking': 'Screen 6  Resource booking',
-  'maintenance': 'Screen 7  Maintenance Management',
-  'audit': 'Screen 8  Asset Audit',
-  'reports': 'Screen 9  Reports & Analytics',
-  'notifications': 'Screen 10  Activity Logs & Notifications'
+  'dashboard': 'Dashboard Overview',
+  'org-setup': 'Organization Setup',
+  'assets': 'Asset Registry & Directory',
+  'allocation': 'Asset Allocation & Transfers',
+  'booking': 'Resource Schedule & Bookings',
+  'maintenance': 'Maintenance Ticket Management',
+  'audit': 'Asset Verification Audits',
+  'reports': 'Reports & Analytics',
+  'notifications': 'Activity Logs & Alerts',
+  'learn-more': 'User Guide & Modules',
+  'privacy': 'Privacy Policy',
+  'terms': 'Terms of Service'
 };
 
 function App() {
@@ -141,6 +147,12 @@ function App() {
             <ReportsPage />
           ) : activeTab === 'notifications' ? (
             <NotificationsPage notifications={notifications} setNotifications={setNotifications} />
+          ) : activeTab === 'learn-more' ? (
+            <LearnMorePage />
+          ) : activeTab === 'privacy' ? (
+            <PrivacyPolicyPage />
+          ) : activeTab === 'terms' ? (
+            <TermsPage />
           ) : (
             <PlaceholderPage title={currentTitle} id={activeTab} />
           )}
@@ -150,9 +162,9 @@ function App() {
         <footer className="flex justify-between items-center text-xs font-semibold text-text-muted mt-12 pt-6 border-t border-border-color">
           <div>&copy; 2025 AssetFlow. All rights reserved.</div>
           <div className="flex gap-4">
-            <a href="#privacy" className="hover:text-text-secondary transition-all">Privacy Policy</a>
+            <button onClick={() => setActiveTab('privacy')} className="hover:text-text-secondary transition-all cursor-pointer">Privacy Policy</button>
             <span className="opacity-30">|</span>
-            <a href="#terms" className="hover:text-text-secondary transition-all">Terms of Service</a>
+            <button onClick={() => setActiveTab('terms')} className="hover:text-text-secondary transition-all cursor-pointer">Terms of Service</button>
           </div>
         </footer>
       </main>

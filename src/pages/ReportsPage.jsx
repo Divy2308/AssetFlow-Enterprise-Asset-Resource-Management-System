@@ -117,19 +117,19 @@ export default function ReportsPage() {
 
         {/* Date Selector and Filters triggers */}
         <div className="flex items-center gap-3">
-          <div className="relative w-52">
-            <span className="absolute left-4 top-3 text-primary-orange">
+          <div className="relative w-52 h-[38px] flex items-center">
+            <span className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center text-primary-orange pointer-events-none z-10">
               <CalendarIcon size={16} />
             </span>
             <select
               value={dateRange}
-              className="w-full border border-border-color bg-white pl-11 pr-10 py-2.5 rounded-xl text-xs font-bold text-text-primary focus:outline-none focus:border-primary-orange appearance-none cursor-pointer"
+              className="w-full h-full border border-primary-orange bg-white pl-11 pr-10 rounded-xl text-xs font-bold text-text-primary focus:outline-none appearance-none cursor-pointer flex items-center"
               onChange={(e) => setDateRange(e.target.value)}
             >
               <option value="1 - 15 Jul 2026">1 - 15 Jul 2026</option>
               <option value="16 - 30 Jul 2026">16 - 30 Jul 2026</option>
             </select>
-            <span className="absolute right-4 top-3.5 text-text-secondary pointer-events-none">
+            <span className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center text-primary-orange pointer-events-none z-10">
               <ChevronDownIcon size={12} />
             </span>
           </div>
@@ -185,9 +185,18 @@ export default function ReportsPage() {
                 const barHeight = (dept.value / 100) * 170;
                 const y = 190 - barHeight;
 
+                const barColors = [
+                  '#3B82F6', // Blue for Engineering
+                  '#06B6D4', // Cyan/Teal for IT
+                  '#FF5A1F', // Orange for HR
+                  '#8A5CF5', // Purple for Operations
+                  '#F59E0B', // Amber for Admin
+                  '#10B981'  // Emerald Green for Finance
+                ];
+
                 return (
                   <g key={idx} className="group">
-                    {/* Orange Bar rect */}
+                    {/* Colorful Bar rect */}
                     <rect
                       x={x}
                       y={y}
@@ -195,8 +204,8 @@ export default function ReportsPage() {
                       height={barHeight}
                       rx="4"
                       ry="4"
-                      fill="var(--primary-orange)"
-                      className="transition-all duration-300 hover:fill-primary-orange-hover cursor-pointer"
+                      fill={barColors[idx % barColors.length]}
+                      className="transition-all duration-300 hover:opacity-80 cursor-pointer"
                     />
                     {/* Count overlay label */}
                     <text
@@ -244,8 +253,12 @@ export default function ReportsPage() {
             <svg viewBox={`0 0 ${lineChartWidth} ${lineChartHeight}`} width="100%" height="220">
               <defs>
                 <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="var(--primary-orange)" stopOpacity="0.16" />
-                  <stop offset="100%" stopColor="var(--primary-orange)" stopOpacity="0.0" />
+                  <stop offset="0%" stopColor="#8A5CF5" stopOpacity="0.2" />
+                  <stop offset="100%" stopColor="#3B82F6" stopOpacity="0.0" />
+                </linearGradient>
+                <linearGradient id="lineGradient" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stopColor="#8A5CF5" />
+                  <stop offset="100%" stopColor="#3B82F6" />
                 </linearGradient>
               </defs>
 
@@ -274,7 +287,7 @@ export default function ReportsPage() {
               <path
                 d={getLinePath(activeData.maintenanceLine)}
                 fill="none"
-                stroke="var(--primary-orange)"
+                stroke="url(#lineGradient)"
                 strokeWidth="3"
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -296,7 +309,7 @@ export default function ReportsPage() {
                       cx={cx}
                       cy={cy}
                       r="4.5"
-                      fill="var(--primary-orange)"
+                      fill="#8A5CF5"
                       stroke="#FFFFFF"
                       strokeWidth="2"
                       className="transition-all duration-500"

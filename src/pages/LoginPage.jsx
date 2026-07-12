@@ -54,7 +54,7 @@ export default function LoginPage({ onLogin }) {
 
       {/* Login Card Wrapper */}
       <div className="relative w-full max-w-md bg-white border border-border-color/60 rounded-[2rem] shadow-xl p-8 flex flex-col gap-6 animate-in fade-in duration-300">
-        
+
         {/* 1. Header Brand Logo */}
         <div className="flex items-center gap-2 justify-center select-none">
           <svg width="34" height="34" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">

@@ -10,7 +10,7 @@ import {
   ReportsIcon,
   BellIcon
 } from './Icons';
-import heroImg from '../assets/hero.png';
+import promoImg from '../assets/sidebar_promo.jpg';
 
 const menuItems = [
   { id: 'dashboard', label: 'Dashboard', Icon: BoxIcon },
@@ -45,11 +45,10 @@ export default function Sidebar({ activeTab, onTabChange, unreadCount = 0 }) {
                 <li key={item.id}>
                   <button
                     onClick={() => onTabChange(item.id)}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 text-left border ${
-                      isInterfaceActive
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 text-left border ${isInterfaceActive
                         ? 'bg-primary-orange-light text-primary-orange border-primary-orange-border/30'
                         : 'text-text-secondary hover:bg-bg-gray hover:text-text-primary border-transparent'
-                    }`}
+                      }`}
                   >
                     <span className="flex items-center justify-center shrink-0">
                       <item.Icon size={18} />
@@ -73,14 +72,17 @@ export default function Sidebar({ activeTab, onTabChange, unreadCount = 0 }) {
       {/* Sidebar Promo Call to Action */}
       <div className="bg-gradient-to-br from-primary-orange-light to-white border border-primary-orange-border/20 rounded-2xl p-5 text-center mt-6 flex flex-col items-center">
         <img
-          src={heroImg}
+          src={promoImg}
           alt="Manage Assets illustration"
-          className="w-[120px] h-auto mb-3"
+          className="w-[120px] h-auto mb-3 object-contain rounded-xl"
         />
         <h4 className="text-xs font-bold text-text-primary mb-3 leading-snug">
           Manage your assets smarter and faster
         </h4>
-        <button className="w-full bg-primary-orange hover:bg-primary-orange-hover text-white text-xs font-extrabold py-2.5 px-4 rounded-xl transition-all duration-200 shadow-sm cursor-pointer">
+        <button
+          onClick={() => onTabChange('learn-more')}
+          className="w-full bg-primary-orange hover:bg-primary-orange-hover text-white text-xs font-extrabold py-2.5 px-4 rounded-xl transition-all duration-200 shadow-sm cursor-pointer"
+        >
           Learn more
         </button>
       </div>
