@@ -46,8 +46,14 @@ export default function Sidebar({ activeTab, onTabChange, unreadCount = 0 }) {
     <aside className="w-64 bg-white border-r border-border-color flex flex-col justify-between p-6 shrink-0 h-screen sticky top-0">
       <div>
         {/* Brand Logo */}
-        <div className="flex items-center gap-3 mb-8">
-          <BoxIcon size={28} className="text-primary-orange" />
+        <div className="flex items-center gap-3.5 mb-8 select-none">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="shrink-0 animate-pulse-slow">
+            <path d="M12 2L3 7v10l9 5 9-5V7l-9-5z" stroke="#FF5A1F" strokeWidth="2.5" strokeLinejoin="round" />
+            <path d="M12 22V12" stroke="#FF5A1F" strokeWidth="2.5" />
+            <path d="M12 12L3 7" stroke="#FF5A1F" strokeWidth="2.5" />
+            <path d="M12 12l9-5" stroke="#FF5A1F" strokeWidth="2.5" />
+            <circle cx="12" cy="12" r="3" fill="#FF5A1F" />
+          </svg>
           <span className="font-heading text-xl font-extrabold text-text-primary tracking-tight">
             Asset<span className="text-primary-orange">Flow</span>
           </span>
