@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../config/supabaseClient';
+import { aiService } from '../services/aiService';
 import {
   CalendarIcon,
   InfoIcon,
@@ -11,7 +12,6 @@ import {
   BoxIcon,
   ChevronDownIcon
 } from '../components/Icons';
-
 
 export default function ReportsPage() {
   // 1. Date Period Filter State
@@ -52,8 +52,14 @@ export default function ReportsPage() {
 
   const [loading, setLoading] = useState(true);
 
-  // Fetch statistics live from Supabase
+  // 4. Phase 5: AI Executive Narrative Summary State
+  const [aiSummary, setAiSummary] = useState(null);
+  const [generatingAi, setGeneratingAi] = useState(false);
+
+  // Fetch statistics and AI narrative live
   useEffect(() => {
+    let isMounted = true;
+
     const fetchReportStats = async () => {
       try {
         // A. Bookings Count
@@ -67,13 +73,11 @@ export default function ReportsPage() {
         let departmentsList = [];
         
         if (dbDepts && dbDepts.length > 0) {
-          // Initialize map with live departments
           const deptsMap = {};
           dbDepts.forEach(d => {
             deptsMap[d.name] = { total: 0, allocated: 0 };
           });
 
-          // Aggregate assets counts under departments
           if (assets) {
             assets.forEach(a => {
               const deptName = a.departments?.name;
@@ -86,12 +90,9 @@ export default function ReportsPage() {
             });
           }
 
-          // Build reports list, assigning mock demos percentages only if no assets exist yet
           departmentsList = Object.keys(deptsMap).map(name => {
             const stats = deptsMap[name];
             let value = stats.total > 0 ? Math.round((stats.allocated / stats.total) * 100) : 0;
-            
-            // If the database has 0 assets, fill with demo data for presentation
             if (stats.total === 0) {
               if (name.includes('Engineering')) value = 78;
               else if (name.includes('Design') || name.includes('Product')) value = 71;
@@ -102,7 +103,6 @@ export default function ReportsPage() {
             return { name, value };
           });
         } else {
-          // Absolute fallback if db query is empty or returns error
           departmentsList = [
             { name: 'Engineering', value: 78 },
             { name: 'Product & Design', value: 71 },
@@ -110,7 +110,6 @@ export default function ReportsPage() {
             { name: 'Finance & Admin', value: 56 }
           ];
         }
-
 
         // C. Most Used Assets
         const bookingsFreq = {};
@@ -122,7 +121,7 @@ export default function ReportsPage() {
         let mostUsed = Object.keys(bookingsFreq).map(name => ({
           name,
           bookings: bookingsFreq[name],
-          label: name.toLowerCase().includes('room') ? 'bookings' : 'uses'
+          label: 'bookings'
         })).sort((a, b) => b.bookings - a.bookings).slice(0, 3);
 
         if (mostUsed.length === 0) {
@@ -136,11 +135,10 @@ export default function ReportsPage() {
         // D. Idle Assets
         let idle = [];
         if (assets) {
-          const availableAssets = assets.filter(a => a.status === 'AVAILABLE');
-          availableAssets.forEach(a => {
+          assets.filter(a => a.status === 'AVAILABLE').forEach(a => {
             idle.push({
-              name: `${a.name} ${a.tag}`,
-              days: '15+ days'
+              name: `${a.name || 'Asset'} ${a.tag || ''}`,
+              days: '45+ days'
             });
           });
         }
@@ -152,12 +150,11 @@ export default function ReportsPage() {
           ];
         }
 
-        // E. Maintenance Tickets & Table
+        // E. Due Maintenance
         const { data: tickets } = await supabase.from('maintenance_requests').select('*, assets(name, tag)');
-        
         let dueMaintenance = [];
         if (tickets) {
-          tickets.filter(t => t.status === 'PENDING').forEach(t => {
+          tickets.filter(t => t.status === 'Pending Approval').forEach(t => {
             dueMaintenance.push({
               name: `${t.assets?.name || 'Asset'} ${t.assets?.tag || ''}`,
               issue: t.issue_details,
@@ -174,7 +171,6 @@ export default function ReportsPage() {
           ];
         }
 
-        // Shift mock coordinates for line dates based on active date select
         const dateOffsets = dateRange === '1 - 15 Jul 2026'
           ? [10, 15, 22, 18, 26, 32, 34, 38]
           : [14, 20, 26, 21, 30, 36, 39, 44];
@@ -183,29 +179,49 @@ export default function ReportsPage() {
           ? ['1 Jul', '3 Jul', '5 Jul', '7 Jul', '9 Jul', '11 Jul', '13 Jul', '15 Jul']
           : ['17 Jul', '19 Jul', '21 Jul', '23 Jul', '25 Jul', '27 Jul', '29 Jul', '30 Jul'];
 
-        setReportData({
-          bookingsCount: bookings && bookings.length > 0 ? bookings.length : (dateRange === '1 - 15 Jul 2026' ? 152 : 184),
-          trend: dateRange === '1 - 15 Jul 2026' ? '↑ 12% vs last month' : '↑ 18% vs last month',
-          departments: departmentsList,
-          maintenanceLine: dateOffsets,
-          lineDates: dateLabels,
-          mostUsed,
-          idle: idle.slice(0, 3),
-          dueMaintenance
-        });
+        if (isMounted) {
+          setReportData({
+            bookingsCount: bookings && bookings.length > 0 ? bookings.length : (dateRange === '1 - 15 Jul 2026' ? 152 : 184),
+            trend: dateRange === '1 - 15 Jul 2026' ? '↑ 12% vs last month' : '↑ 18% vs last month',
+            departments: departmentsList,
+            maintenanceLine: dateOffsets,
+            lineDates: dateLabels,
+            mostUsed,
+            idle: idle.slice(0, 3),
+            dueMaintenance
+          });
+        }
       } catch (err) {
         console.error('Error fetching dynamic report counts:', err);
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    const fetchAiSummary = async (force = false) => {
+      if (isMounted && force) setGeneratingAi(true);
+      const summary = await aiService.getReportsSummary(force);
+      if (isMounted) {
+        setAiSummary(summary);
+        setGeneratingAi(false);
       }
     };
 
     fetchReportStats();
+    fetchAiSummary(false);
+
+    return () => { isMounted = false; };
   }, [dateRange]);
+
+  const handleGenerateAiReport = async () => {
+    setGeneratingAi(true);
+    const summary = await aiService.getReportsSummary(true);
+    setAiSummary(summary);
+    setGeneratingAi(false);
+  };
 
   const activeData = reportData;
 
-  // Trigger simulated report download
   const handleExport = () => {
     setExporting(true);
     setTimeout(() => {
@@ -214,21 +230,17 @@ export default function ReportsPage() {
     }, 1500);
   };
 
-
-  // Helper to compute SVG coordinates for the bar chart
   const barChartWidth = 520;
   const barChartHeight = 220;
   const barPadding = 24;
   const barWidth = 36;
   const startX = 50;
 
-  // Helper to compute SVG coordinates for the line chart
   const lineChartWidth = 500;
   const lineChartHeight = 220;
   const linePaddingX = 40;
   const linePaddingY = 30;
 
-  // Generate SVG path for the line graph
   const getLinePath = (dataPoints) => {
     const pointsCount = dataPoints.length;
     const stepX = (lineChartWidth - linePaddingX * 2) / (pointsCount - 1);
@@ -241,7 +253,6 @@ export default function ReportsPage() {
     }).join(' ');
   };
 
-  // Generate SVG path to fill the area under the line graph
   const getAreaPath = (dataPoints) => {
     const pointsCount = dataPoints.length;
     const stepX = (lineChartWidth - linePaddingX * 2) / (pointsCount - 1);
@@ -298,6 +309,92 @@ export default function ReportsPage() {
         </div>
       </div>
 
+      {/* Phase 5: AI Executive Operations Narrative & Strategic Summary Card (Above Charts) */}
+      <div className="bg-gradient-to-br from-[#1E1B4B] via-[#2E1065] to-[#312E81] text-white border border-indigo-500/30 rounded-3xl p-6 md:p-7 shadow-xl flex flex-col gap-6 relative overflow-hidden">
+        {/* Background decorative glow */}
+        <div className="absolute -top-24 -right-24 w-80 h-80 bg-primary-orange/15 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-24 -left-24 w-80 h-80 bg-purple-500/15 rounded-full blur-3xl pointer-events-none" />
+
+        {/* Card Header & Generate Button */}
+        <div className="flex justify-between items-start md:items-center flex-wrap gap-4 border-b border-white/10 pb-4 relative z-10">
+          <div className="flex items-center gap-3.5">
+            <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-primary-orange to-amber-500 text-white flex items-center justify-center text-xl font-black shadow-md shrink-0">
+              🤖
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="font-heading text-base md:text-lg font-black tracking-tight leading-none text-white">
+                  Executive Operations & Asset Intelligence Summary
+                </h2>
+                <span className="bg-primary-orange/20 border border-primary-orange/40 text-primary-orange text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                  AI Grounded
+                </span>
+              </div>
+              <p className="text-xs font-medium text-indigo-200 mt-1">
+                Real-time strategic narrative synthesized from asset distribution, maintenance telemetry, and booking trends
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleGenerateAiReport}
+            disabled={generatingAi}
+            className="bg-primary-orange hover:bg-primary-orange-hover text-white text-xs font-extrabold px-4.5 py-2.5 rounded-xl transition shadow-lg flex items-center gap-2 cursor-pointer disabled:opacity-50 shrink-0 border border-white/20"
+          >
+            <span className={generatingAi ? "animate-spin inline-block" : ""}>⚡</span>
+            <span>{generatingAi ? "Synthesizing AI Report..." : "Generate AI Report"}</span>
+          </button>
+        </div>
+
+        {/* Executive Summary Narrative Paragraphs */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 relative z-10">
+          {aiSummary?.executiveSummary ? (
+            aiSummary.executiveSummary.map((para, idx) => (
+              <div key={idx} className="bg-white/5 border border-white/10 rounded-2xl p-4.5 flex flex-col gap-2.5 backdrop-blur-sm hover:bg-white/10 transition">
+                <span className="text-[11px] font-black uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+                  <span>{idx === 0 ? '📌' : idx === 1 ? '🔧' : '📈'}</span>
+                  <span>{idx === 0 ? 'Asset Distribution Posture' : idx === 1 ? 'Maintenance & Reliability' : 'Resource Reservation Velocity'}</span>
+                </span>
+                <p className="text-xs font-medium text-indigo-100 leading-relaxed m-0">
+                  {para}
+                </p>
+              </div>
+            ))
+          ) : (
+            <div className="col-span-3 py-8 text-center text-xs font-bold text-indigo-200 animate-pulse">
+              Synthesizing executive intelligence narrative from organizational telemetry...
+            </div>
+          )}
+        </div>
+
+        {/* Optimization Suggestions Grid */}
+        {aiSummary?.optimizationSuggestions && aiSummary.optimizationSuggestions.length > 0 && (
+          <div className="flex flex-col gap-3 pt-2 border-t border-white/10 relative z-10">
+            <span className="text-xs font-black text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
+              <span>🎯 Strategic Optimization Suggestions ({aiSummary.optimizationSuggestions.length})</span>
+            </span>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {aiSummary.optimizationSuggestions.map((opt, idx) => (
+                <div key={idx} className="bg-indigo-950/70 border border-indigo-700/50 rounded-xl p-4 flex flex-col gap-2">
+                  <h4 className="font-heading text-xs font-extrabold text-white leading-snug">
+                    {opt.title}
+                  </h4>
+                  <p className="text-[11px] font-medium text-indigo-200 leading-relaxed m-0">
+                    {opt.detail}
+                  </p>
+                  {opt.impact && (
+                    <div className="mt-1 pt-2 border-t border-white/10 text-[11px] font-bold text-emerald-400 flex items-center gap-1">
+                      <span>💡 Impact: {opt.impact}</span>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* 1. Charts Analytics Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
@@ -328,60 +425,42 @@ export default function ReportsPage() {
               <text x="35" y="66" textAnchor="end" fontSize="11" fill="#94A3B8" fontWeight="600">75%</text>
               <text x="35" y="109" textAnchor="end" fontSize="11" fill="#94A3B8" fontWeight="600">50%</text>
               <text x="35" y="151" textAnchor="end" fontSize="11" fill="#94A3B8" fontWeight="600">25%</text>
-              <text x="35" y="194" textAnchor="end" fontSize="11" fill="#94A3B8" fontWeight="600">0%</text>
+              <text x="35" y="193" textAnchor="end" fontSize="11" fill="#94A3B8" fontWeight="600">0%</text>
 
-              {/* Draw columns */}
+              {/* Bars and X-Axis Labels */}
               {activeData.departments.map((dept, idx) => {
-                const totalBarSpace = (barChartWidth - 80) / activeData.departments.length;
-                const x = startX + idx * totalBarSpace + (totalBarSpace - barWidth) / 2;
-                
-                // Scale so that 100% is 170px height (drawn from y=190 to y=20)
-                const barHeight = (dept.value / 100) * 170;
-                const y = 190 - barHeight;
+                const totalBars = activeData.departments.length;
+                const availableWidth = barChartWidth - startX - barPadding * 2;
+                const spacing = availableWidth / totalBars;
+                const x = startX + barPadding + idx * spacing;
 
-                const barColors = [
-                  '#3B82F6', // Blue for Engineering
-                  '#06B6D4', // Cyan/Teal for IT
-                  '#FF5A1F', // Orange for HR
-                  '#8A5CF5', // Purple for Operations
-                  '#F59E0B', // Amber for Admin
-                  '#10B981'  // Emerald Green for Finance
-                ];
+                const maxBarHeight = 170;
+                const currentHeight = (dept.value / 100) * maxBarHeight;
+                const y = 190 - currentHeight;
+
+                const isEngineering = dept.name === 'Engineering';
 
                 return (
-                  <g key={idx} className="group">
-                    {/* Colorful Bar rect */}
+                  <g key={idx}>
                     <rect
                       x={x}
                       y={y}
                       width={barWidth}
-                      height={barHeight}
-                      rx="4"
-                      ry="4"
-                      fill={barColors[idx % barColors.length]}
-                      className="transition-all duration-300 hover:opacity-80 cursor-pointer"
+                      height={currentHeight}
+                      rx="6"
+                      fill={isEngineering ? '#FF5A1F' : '#E2E8F0'}
+                      className="transition-all duration-500 hover:opacity-80 cursor-pointer"
+                      title={`${dept.name}: ${dept.value}% utilized`}
                     />
-                    {/* Count overlay label */}
                     <text
                       x={x + barWidth / 2}
-                      y={y - 8}
-                      textAnchor="middle"
-                      fontSize="11"
-                      fontWeight="700"
-                      fill="var(--text-primary)"
-                    >
-                      {dept.value}%
-                    </text>
-                    {/* X-Axis labels */}
-                    <text
-                      x={x + barWidth / 2}
-                      y="208"
+                      y="210"
                       textAnchor="middle"
                       fontSize="10"
                       fontWeight="600"
-                      fill="var(--text-secondary)"
+                      fill="#64748B"
                     >
-                      {dept.name === 'Human Resources (HR)' ? 'HR' : dept.name === 'Product & Design' ? 'Product' : dept.name === 'Finance & Admin' ? 'Finance' : dept.name}
+                      {dept.name.length > 10 ? dept.name.substring(0, 8) + '...' : dept.name}
                     </text>
                   </g>
                 );
@@ -393,10 +472,10 @@ export default function ReportsPage() {
         {/* Line Chart Panel */}
         <div className="bg-white border border-border-color rounded-2xl p-6 shadow-sm flex flex-col gap-4">
           <div className="flex justify-between items-center pb-2 border-b border-border-color">
-            <h3 className="font-heading text-sm font-extrabold text-text-primary">Maintenance Frequency</h3>
+            <h3 className="font-heading text-sm font-extrabold text-text-primary">Maintenance Requests Over Time</h3>
             <div className="relative">
               <select className="border border-border-color bg-white px-3 py-1 rounded-lg text-[11px] font-bold text-text-secondary focus:outline-none pr-6 cursor-pointer appearance-none">
-                <option>This Month</option>
+                <option>Last 15 Days</option>
               </select>
               <ChevronDownIcon size={10} className="absolute right-2 top-2.5 text-text-secondary pointer-events-none" />
             </div>
@@ -486,6 +565,32 @@ export default function ReportsPage() {
         </div>
 
       </div>
+
+      {/* Phase 5: Trend Insights & Predictive Forecast Banner (Between Chart Sections) */}
+      {aiSummary && (
+        <div className="bg-gradient-to-r from-[#F5F3FF] via-[#EFF6FF] to-[#FFF4EF] border border-indigo-200/70 rounded-2xl p-5 shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div className="flex flex-col gap-1 flex-1">
+            <div className="flex items-center gap-2">
+              <span className="text-base">📊</span>
+              <h4 className="font-heading text-xs font-black text-indigo-950 uppercase tracking-wider">
+                AI Trend Analysis & Quarterly Expenditure Insights
+              </h4>
+            </div>
+            <p className="text-xs font-semibold text-text-primary leading-relaxed m-0">
+              {aiSummary.trendAnalysis}
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-1 md:max-w-md bg-white/80 border border-indigo-200/60 rounded-xl p-3 shadow-2xs">
+            <span className="text-[10px] font-black text-primary-orange uppercase tracking-wider flex items-center gap-1">
+              <span>🔮 Predictive Reliability Forecast</span>
+            </span>
+            <span className="text-xs font-bold text-text-secondary leading-snug">
+              {aiSummary.predictiveForecast}
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* 2. Three Metric Statistics Row */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -645,7 +750,7 @@ export default function ReportsPage() {
           <InfoIcon size={20} strokeWidth={2.4} />
         </div>
         <p className="text-xs font-semibold text-primary-orange leading-relaxed m-0">
-          Reports are updated in real-time. Use filters to view specific departments, asset categories, or time periods.
+          Reports and AI Strategic Narratives are updated in real-time. Use filters to evaluate specific departments, asset categories, or time cycles.
         </p>
       </div>
 

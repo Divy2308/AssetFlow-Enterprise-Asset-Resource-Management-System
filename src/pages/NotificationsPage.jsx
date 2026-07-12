@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { aiService } from '../services/aiService';
+import AnomalyCard from '../components/AnomalyCard';
 import {
   CalendarIcon,
   InfoIcon,
@@ -25,6 +27,17 @@ export default function NotificationsPage({ notifications = [], setNotifications
   // 3. Pagination Page State
   const [currentPage, setCurrentPage] = useState(1);
 
+  // 4. Phase 3: AI Anomaly Insights State
+  const [aiAlerts, setAiAlerts] = useState([]);
+
+  useEffect(() => {
+    let isMounted = true;
+    aiService.getAnomalyAlerts().then(list => {
+      if (isMounted) setAiAlerts(list || []);
+    });
+    return () => { isMounted = false; };
+  }, []);
+
   // Helper to resolve card icon components
   const getCategoryIcon = (type) => {
     switch (type) {
@@ -38,7 +51,7 @@ export default function NotificationsPage({ notifications = [], setNotifications
     }
   };
 
-  // Filter & Search Logic
+  // Filter & Search Logic for regular notifications
   const filteredNotifications = notifications.filter((item) => {
     // A. Category Tab Filter
     const matchesCategory =
@@ -56,12 +69,24 @@ export default function NotificationsPage({ notifications = [], setNotifications
     return matchesCategory && matchesSearch;
   });
 
+  // Filter & Search Logic for AI Anomaly alerts
+  const filteredAiAlerts = aiAlerts.filter((item) => {
+    if (!searchQuery) return true;
+    return item.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+           item.description?.toLowerCase().includes(searchQuery.toLowerCase());
+  });
+
   // Mark notification as read
   const handleCardClick = (id) => {
     if (!setNotifications) return;
     setNotifications(
       notifications.map((n) => (n.id === id ? { ...n, isUnread: false } : n))
     );
+  };
+
+  const handleDismissAiAlert = async (id) => {
+    await aiService.dismissAnomaly(id);
+    setAiAlerts(aiAlerts.filter(a => a.id !== id));
   };
 
   const getBadgeColors = (bgColor) => {
@@ -90,7 +115,7 @@ export default function NotificationsPage({ notifications = [], setNotifications
       <div className="flex justify-between items-center gap-4 flex-nowrap overflow-x-auto pb-1 mt-[-16px]">
         
         {/* Left Side: Filter Tabs */}
-        <div className="flex gap-1.5 bg-bg-gray border border-border-color p-1 rounded-xl shrink-0">
+        <div className="flex gap-1.5 bg-bg-gray border border-border-color p-1 rounded-xl flex-wrap">
           <button
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-extrabold transition duration-200 cursor-pointer ${
               activeCategory === 'All'
@@ -146,6 +171,20 @@ export default function NotificationsPage({ notifications = [], setNotifications
             <span className="w-1.5 h-1.5 rounded-full bg-[#10B981]" />
             Transfers
           </button>
+          <button
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-extrabold transition duration-200 cursor-pointer ${
+              activeCategory === 'AI_Insights'
+                ? 'bg-white text-text-primary shadow-xs'
+                : 'text-text-secondary hover:text-text-primary'
+            }`}
+            onClick={() => {
+              setActiveCategory('AI_Insights');
+              setCurrentPage(1);
+            }}
+          >
+            <span>🤖</span>
+            <span>AI Insights ({aiAlerts.length})</span>
+          </button>
         </div>
 
         {/* Right Side: Search input */}
@@ -168,62 +207,87 @@ export default function NotificationsPage({ notifications = [], setNotifications
         </div>
       </div>
 
-      {/* 2. Notifications Feed list */}
-      <div className="flex flex-col gap-3">
-        {filteredNotifications.length > 0 ? (
-          filteredNotifications.map((item) => {
-            const CardIcon = getCategoryIcon(item.type);
-            return (
-              <div
-                key={item.id}
-                className="bg-white border border-border-color rounded-2xl p-4.5 shadow-xs flex justify-between items-center gap-4 cursor-pointer hover:shadow-sm transition-all duration-200 text-left"
-                onClick={() => handleCardClick(item.id)}
-              >
-                {/* Left Section (Icon avatar, colored category dot, description labels) */}
-                <div className="flex items-center gap-4">
-                  {/* Category icon avatar container */}
-                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${getBadgeColors(item.bgColor)}`}>
-                    <CardIcon size={16} />
-                  </div>
+      {/* 2. Notifications Feed / AI Anomaly Cards */}
+      {activeCategory === 'AI_Insights' ? (
+        <div className="flex flex-col gap-4">
+          {filteredAiAlerts.length > 0 ? (
+            filteredAiAlerts.map((ano) => (
+              <AnomalyCard
+                key={ano.id}
+                anomaly={ano}
+                onDismiss={handleDismissAiAlert}
+                onAction={(item) => {
+                  if (item.action_url) window.location.href = item.action_url;
+                  else alert(`Action triggered for: ${item.title}\nRecommendation: ${item.recommendation}`);
+                }}
+              />
+            ))
+          ) : (
+            <div className="flex flex-col items-center justify-center p-12 bg-white border border-border-color rounded-2xl text-center gap-2">
+              <InfoIcon size={32} className="text-text-muted mb-1" />
+              <p className="text-xs font-extrabold text-text-secondary m-0">
+                No active AI anomalies or critical insights currently flagged.
+              </p>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {filteredNotifications.length > 0 ? (
+            filteredNotifications.map((item) => {
+              const CardIcon = getCategoryIcon(item.type);
+              return (
+                <div
+                  key={item.id}
+                  className="bg-white border border-border-color rounded-2xl p-4.5 shadow-xs flex justify-between items-center gap-4 cursor-pointer hover:shadow-sm transition-all duration-200 text-left"
+                  onClick={() => handleCardClick(item.id)}
+                >
+                  {/* Left Section (Icon avatar, colored category dot, description labels) */}
+                  <div className="flex items-center gap-4">
+                    {/* Category icon avatar container */}
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${getBadgeColors(item.bgColor)}`}>
+                      <CardIcon size={16} />
+                    </div>
 
-                  {/* Message details */}
-                  <div className="flex items-center gap-2.5">
-                    <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${getDotColors(item.dotColor)}`} />
-                    <div className="flex flex-col text-left">
-                      <span className="text-xs font-extrabold text-text-primary">{item.text}</span>
-                      {item.subtext && (
-                        <span className="text-[11px] text-text-secondary font-semibold mt-0.5">
-                          {item.subtext}
-                        </span>
-                      )}
+                    {/* Message details */}
+                    <div className="flex items-center gap-2.5">
+                      <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${getDotColors(item.dotColor)}`} />
+                      <div className="flex flex-col text-left">
+                        <span className="text-xs font-extrabold text-text-primary">{item.text}</span>
+                        {item.subtext && (
+                          <span className="text-[11px] text-text-secondary font-semibold mt-0.5">
+                            {item.subtext}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Right Section (Relative timestamp, orange unread status badge) */}
-                <div className="flex items-center">
-                  <span className="text-xs font-bold text-text-secondary min-w-[65px] text-right">{item.time}</span>
-                  {item.isUnread && (
-                    <span className="w-2.5 h-2.5 rounded-full bg-primary-orange ml-3.5 shrink-0" title="Unread notification" />
-                  )}
+                  {/* Right Section (Relative timestamp, orange unread status badge) */}
+                  <div className="flex items-center">
+                    <span className="text-xs font-bold text-text-secondary min-w-[65px] text-right">{item.time}</span>
+                    {item.isUnread && (
+                      <span className="w-2.5 h-2.5 rounded-full bg-primary-orange ml-3.5 shrink-0" title="Unread notification" />
+                    )}
+                  </div>
                 </div>
-              </div>
-            );
-          })
-        ) : (
-          <div className="flex flex-col items-center justify-center p-12 bg-white border border-border-color rounded-2xl text-center gap-2">
-            <InfoIcon size={32} className="text-text-muted mb-1" />
-            <p className="text-xs font-extrabold text-text-secondary m-0">
-              No notifications found matching the active criteria.
-            </p>
-          </div>
-        )}
-      </div>
+              );
+            })
+          ) : (
+            <div className="flex flex-col items-center justify-center p-12 bg-white border border-border-color rounded-2xl text-center gap-2">
+              <InfoIcon size={32} className="text-text-muted mb-1" />
+              <p className="text-xs font-extrabold text-text-secondary m-0">
+                No notifications found matching the active criteria.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* 3. Pagination controls */}
       <div className="flex justify-between items-center text-xs font-bold text-text-secondary p-4 border-t border-border-color flex-wrap gap-4 mt-1">
         <span>
-          Showing 1 to {filteredNotifications.length} of {filteredNotifications.length} notifications
+          Showing 1 to {activeCategory === 'AI_Insights' ? filteredAiAlerts.length : filteredNotifications.length} items
         </span>
 
         <div className="flex items-center gap-4">
@@ -259,7 +323,7 @@ export default function NotificationsPage({ notifications = [], setNotifications
             <InfoIcon size={20} strokeWidth={2.4} />
           </div>
           <p className="text-xs font-semibold text-primary-orange leading-relaxed m-0">
-            Notifications help you stay on top of important activities and never miss an update.
+            Notifications and AI Insights help you stay on top of critical anomalies and routine updates.
           </p>
         </div>
 
@@ -280,7 +344,7 @@ export default function NotificationsPage({ notifications = [], setNotifications
             <path d="M13.73 21a2 2 0 0 1-3.46 0" />
           </svg>
           <span className="absolute -top-1 -right-1 bg-primary-orange text-white text-[9px] font-black rounded-full w-4 h-4 flex items-center justify-center border-2 border-white">
-            3
+            {activeCategory === 'AI_Insights' ? aiAlerts.length : 3}
           </span>
         </div>
       </div>

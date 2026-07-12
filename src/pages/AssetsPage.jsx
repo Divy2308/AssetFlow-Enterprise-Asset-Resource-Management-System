@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../config/supabaseClient';
+import { aiService } from '../services/aiService';
+import AssetDetailPanel from '../components/AssetDetailPanel';
 import {
   SearchIcon,
   LaptopIcon,
@@ -22,13 +24,17 @@ export default function AssetsPage({ assets, setAssets }) {
   const [statusFilter, setStatusFilter] = useState('All');
   const [deptFilter, setDeptFilter] = useState('All');
 
-  // 2. Pagination State (Mock but fully functional)
+  // 2. Pagination State
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
   // 3. Modal & Dropdown UI State
   const [showRegisterModal, setShowRegisterModal] = useState(false);
   const [activeDropdownRow, setActiveDropdownRow] = useState(null);
+
+  // 4. Phase 2 AI Health State
+  const [selectedAssetForHealth, setSelectedAssetForHealth] = useState(null);
+  const [healthScoreMap, setHealthScoreMap] = useState({});
 
   // Form State for new asset registration
   const [registerForm, setRegisterForm] = useState({
@@ -40,6 +46,15 @@ export default function AssetsPage({ assets, setAssets }) {
   });
 
   const dropdownRef = useRef(null);
+
+  // Load batch cached health scores on mount
+  useEffect(() => {
+    let isMounted = true;
+    aiService.getAllCachedHealthScores().then(map => {
+      if (isMounted) setHealthScoreMap(map);
+    });
+    return () => { isMounted = false; };
+  }, []);
 
   // Close dropdown menu if user clicks outside
   useEffect(() => {
@@ -132,7 +147,6 @@ export default function AssetsPage({ assets, setAssets }) {
 
         setAssets([newAsset, ...assets]);
         setShowRegisterModal(false);
-        // Reset form
         setRegisterForm({
           name: '',
           tag: '',
@@ -209,14 +223,10 @@ export default function AssetsPage({ assets, setAssets }) {
   // Helper to retrieve the appropriate asset type icon
   const getAssetIcon = (type) => {
     switch (type) {
-      case 'laptop':
-        return LaptopIcon;
-      case 'projector':
-        return ProjectorIcon;
-      case 'chair':
-        return ChairIcon;
-      default:
-        return BoxIcon;
+      case 'laptop': return LaptopIcon;
+      case 'projector': return ProjectorIcon;
+      case 'chair': return ChairIcon;
+      default: return BoxIcon;
     }
   };
 
@@ -242,6 +252,17 @@ export default function AssetsPage({ assets, setAssets }) {
         </span>
       );
     }
+  };
+
+  const getHealthBadgeStyle = (scoreObj) => {
+    if (!scoreObj || typeof scoreObj.healthScore !== 'number') {
+      return { className: 'bg-bg-gray text-text-secondary border-border-color hover:border-primary-orange', text: '📊 Analyze Health' };
+    }
+    const score = scoreObj.healthScore;
+    if (score >= 80) return { className: 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100', text: `🟢 ${score}/100 Healthy` };
+    if (score >= 60) return { className: 'bg-amber-50 text-amber-700 border-amber-300 hover:bg-amber-100', text: `🟡 ${score}/100 Monitor` };
+    if (score >= 40) return { className: 'bg-orange-50 text-orange-700 border-orange-300 hover:bg-orange-100', text: `🟠 ${score}/100 Attention` };
+    return { className: 'bg-red-50 text-red-700 border-red-300 hover:bg-red-100', text: `🔴 ${score}/100 Critical` };
   };
 
   return (
@@ -271,7 +292,6 @@ export default function AssetsPage({ assets, setAssets }) {
 
       {/* 2. Filters Grid Row */}
       <div className="flex gap-3 items-center flex-wrap">
-        {/* Category Filter */}
         <div className="relative w-44">
           <select
             value={categoryFilter}
@@ -285,7 +305,6 @@ export default function AssetsPage({ assets, setAssets }) {
           <ChevronDownIcon size={12} className="absolute right-3.5 top-3.5 text-text-secondary pointer-events-none" />
         </div>
 
-        {/* Status Filter */}
         <div className="relative w-44">
           <select
             value={statusFilter}
@@ -300,7 +319,6 @@ export default function AssetsPage({ assets, setAssets }) {
           <ChevronDownIcon size={12} className="absolute right-3.5 top-3.5 text-text-secondary pointer-events-none" />
         </div>
 
-        {/* Department Filter */}
         <div className="relative w-44">
           <select
             value={deptFilter}
@@ -315,7 +333,6 @@ export default function AssetsPage({ assets, setAssets }) {
           <ChevronDownIcon size={12} className="absolute right-3.5 top-3.5 text-text-secondary pointer-events-none" />
         </div>
 
-        {/* Reset Filters button */}
         <button className="flex items-center gap-1.5 text-xs font-bold text-text-secondary hover:text-primary-orange transition cursor-pointer" onClick={handleResetFilters}>
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -339,11 +356,12 @@ export default function AssetsPage({ assets, setAssets }) {
         <table className="w-full border-collapse text-left">
           <thead className="bg-bg-gray border-b border-border-color">
             <tr>
-              <th className="p-4 text-xs font-bold text-text-secondary uppercase tracking-wider" style={{ width: '25%' }}>Tag / Serial</th>
-              <th className="p-4 text-xs font-bold text-text-secondary uppercase tracking-wider" style={{ width: '25%' }}>Name</th>
-              <th className="p-4 text-xs font-bold text-text-secondary uppercase tracking-wider" style={{ width: '18%' }}>Category</th>
-              <th className="p-4 text-xs font-bold text-text-secondary uppercase tracking-wider" style={{ width: '15%' }}>Status</th>
-              <th className="p-4 text-xs font-bold text-text-secondary uppercase tracking-wider" style={{ width: '12%' }}>Location</th>
+              <th className="p-4 text-xs font-bold text-text-secondary uppercase tracking-wider" style={{ width: '22%' }}>Tag / Serial</th>
+              <th className="p-4 text-xs font-bold text-text-secondary uppercase tracking-wider" style={{ width: '22%' }}>Name</th>
+              <th className="p-4 text-xs font-bold text-text-secondary uppercase tracking-wider" style={{ width: '15%' }}>Category</th>
+              <th className="p-4 text-xs font-bold text-text-secondary uppercase tracking-wider" style={{ width: '13%' }}>Status</th>
+              <th className="p-4 text-xs font-bold text-text-secondary uppercase tracking-wider" style={{ width: '13%' }}>Location</th>
+              <th className="p-4 text-xs font-bold text-text-secondary uppercase tracking-wider" style={{ width: '10%' }}>AI Health</th>
               <th className="p-4 text-xs font-bold text-text-secondary uppercase tracking-wider w-[5%] text-center">Actions</th>
             </tr>
           </thead>
@@ -351,9 +369,10 @@ export default function AssetsPage({ assets, setAssets }) {
             {currentItems.length > 0 ? (
               currentItems.map((asset) => {
                 const IconComponent = getAssetIcon(asset.type);
+                const healthInfo = getHealthBadgeStyle(healthScoreMap[asset.id]);
                 return (
                   <tr key={asset.id} className="border-b border-border-color last:border-b-0 hover:bg-bg-gray/30 transition-all">
-                    {/* Tag / Serial with visual decorator */}
+                    {/* Tag / Serial */}
                     <td className="p-4 text-sm font-medium text-text-primary">
                       <div className="flex items-center gap-3">
                         <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 bg-primary-orange-light text-primary-orange">
@@ -394,7 +413,19 @@ export default function AssetsPage({ assets, setAssets }) {
                     {/* Location */}
                     <td className="p-4 text-sm font-medium text-text-primary">{asset.location}</td>
                     
-                    {/* Actions Dots dropdown — only shown to admin/asset_manager */}
+                    {/* AI Health Badge (Clickable) */}
+                    <td className="p-4 text-sm font-medium text-text-primary">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedAssetForHealth(asset)}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-extrabold border transition shadow-2xs cursor-pointer ${healthInfo.className}`}
+                        title="Click to view full AI Reliability breakdown & factors"
+                      >
+                        <span>{healthInfo.text}</span>
+                      </button>
+                    </td>
+
+                    {/* Actions Dots dropdown */}
                     <td className="p-4 text-sm font-medium text-text-primary">
                       <RequireRole allow={[ROLES.ADMIN, ROLES.ASSET_MANAGER]}>
                         <div className="relative" ref={activeDropdownRow === asset.id ? dropdownRef : null}>
@@ -430,7 +461,7 @@ export default function AssetsPage({ assets, setAssets }) {
               })
             ) : (
               <tr>
-                <td colSpan="6" className="p-10 text-sm font-bold text-text-secondary text-center">
+                <td colSpan="7" className="p-10 text-sm font-bold text-text-secondary text-center">
                   No assets found matching the filter criteria.
                 </td>
               </tr>
@@ -445,14 +476,12 @@ export default function AssetsPage({ assets, setAssets }) {
           </div>
           
           <div className="flex items-center gap-4">
-            {/* Page Index lists */}
             <ul className="flex gap-1.5 list-none m-0 p-0">
               <li>
                 <button
                   className="w-8 h-8 rounded-lg border border-border-color flex items-center justify-center transition cursor-pointer text-xs font-extrabold text-text-secondary hover:bg-bg-gray hover:text-text-primary disabled:opacity-40 disabled:cursor-not-allowed"
                   disabled={currentPage === 1}
                   onClick={() => setCurrentPage(currentPage - 1)}
-                  aria-label="Previous page"
                 >
                   <ChevronLeftIcon size={14} />
                 </button>
@@ -476,14 +505,12 @@ export default function AssetsPage({ assets, setAssets }) {
                   className="w-8 h-8 rounded-lg border border-border-color flex items-center justify-center transition cursor-pointer text-xs font-extrabold text-text-secondary hover:bg-bg-gray hover:text-text-primary disabled:opacity-40 disabled:cursor-not-allowed"
                   disabled={currentPage === totalPages}
                   onClick={() => setCurrentPage(currentPage + 1)}
-                  aria-label="Next page"
                 >
                   <ChevronRightIcon size={14} />
                 </button>
               </li>
             </ul>
 
-            {/* Items Per Page dropdown */}
             <div className="relative w-28">
               <select
                 value={itemsPerPage}
@@ -509,7 +536,7 @@ export default function AssetsPage({ assets, setAssets }) {
           <InfoIcon size={20} strokeWidth={2.4} />
         </div>
         <p className="text-xs font-semibold text-primary-orange leading-relaxed m-0">
-          Editing an asset here also drives the picklist in Screen 5 (Allocation & Transfer).
+          Click any <strong className="font-extrabold">AI Health</strong> badge in the table above to open the full diagnostic breakdown and lifecycle forecast panel.
         </p>
       </div>
 
@@ -605,6 +632,15 @@ export default function AssetsPage({ assets, setAssets }) {
           </form>
         </div>
       )}
+
+      {/* 7. Phase 2 AI Asset Detail & Health Breakdown Slide-in Panel */}
+      <AssetDetailPanel
+        asset={selectedAssetForHealth}
+        onClose={() => setSelectedAssetForHealth(null)}
+        onScoreUpdated={(id, newScoreData) => {
+          setHealthScoreMap(prev => ({ ...prev, [id]: newScoreData }));
+        }}
+      />
 
     </div>
   );
