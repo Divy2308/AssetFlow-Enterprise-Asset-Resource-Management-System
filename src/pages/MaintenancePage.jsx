@@ -14,8 +14,13 @@ import {
   UserIcon,
   SettingsIcon
 } from '../components/Icons';
+import { useUserRole } from '../context/RoleContext';
+import { ROLES, hasPermission } from '../utils/permissions';
 
 export default function MaintenancePage({ assets = [], setAssets }) {
+  const { role } = useUserRole();
+  const canApproveMaintenance = hasPermission(role, 'approve_maintenance');
+
   // 1. Initial State for Kanban Tasks
   const [tasks, setTasks] = useState([]);
 
@@ -368,13 +373,20 @@ export default function MaintenancePage({ assets = [], setAssets }) {
                 })}
             </div>
 
-            {/* Add Task placeholder button inside column */}
+            {/* Add Task placeholder button inside column — all roles can raise a request */}
             <button
               className="w-full bg-white border border-border-color border-dashed hover:border-primary-orange text-text-secondary hover:text-primary-orange text-[10px] font-bold py-2 rounded-xl transition cursor-pointer flex items-center justify-center gap-1 mt-1"
               onClick={() => openAddTaskModal(col.id)}
             >
               + Add Task
             </button>
+            {/* Approve hint: shown on the 'approved' column for non-asset-managers */}
+            {col.id === 'approved' && !canApproveMaintenance && (
+              <div className="text-[9px] font-semibold text-text-muted text-center mt-0.5 flex items-center justify-center gap-1">
+                <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+                Asset Managers only
+              </div>
+            )}
           </div>
         ))}
       </div>

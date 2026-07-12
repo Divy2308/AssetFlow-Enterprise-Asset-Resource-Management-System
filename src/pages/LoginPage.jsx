@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { MailIcon, EyeIcon, EyeOffIcon, LockIcon, UserIcon } from '../components/Icons';
+import { MailIcon, EyeIcon, EyeOffIcon, LockIcon, UserIcon, ShieldIcon, ChevronRightIcon } from '../components/Icons';
 import { supabase } from '../config/supabaseClient';
-import promoImg from '../assets/sidebar_promo.jpg';
+import { devLogin, DEV_ACCOUNTS } from '../utils/devAuth';
+import { ROLE_LABELS, ROLE_BADGE_STYLES, ROLES } from '../utils/permissions';
 
 // Self-contained UserPlusIcon for the signup card
 const UserPlusIcon = (props) => (
@@ -56,7 +57,7 @@ export default function LoginPage({ onLogin }) {
           .insert([{
             name: fullName,
             email: email,
-            role: 'EMPLOYEE',
+            role: 'employee',
             status: 'Active'
           }]);
         if (employeeError) throw employeeError;
@@ -66,6 +67,14 @@ export default function LoginPage({ onLogin }) {
         setFullName('');
       } else {
         // Sign In
+        // Try dev login first (checks against DEV_ACCOUNTS in localStorage)
+        const devResult = devLogin(email, password);
+        if (devResult.success) {
+           window.location.reload();
+           return;
+         }
+
+        // Fallback to Supabase Auth
         const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password
@@ -80,17 +89,41 @@ export default function LoginPage({ onLogin }) {
     }
   };
 
+  const handleDevQuickLogin = (account) => {
+    const res = devLogin(account.email, account.password);
+    if (res.success) {
+      window.location.reload();
+    }
+  };
+
   return (
-    <div className="fixed inset-0 bg-gradient-to-br from-orange-50/40 via-white to-orange-100/30 flex flex-col items-center justify-center p-4 z-[9999] overflow-y-auto">
+    <div className="fixed inset-0 bg-gradient-to-br from-orange-50/40 via-white to-orange-100/30 flex flex-col items-center py-12 px-4 z-[9999] overflow-y-auto">
       {/* Background decoration grid */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808008_1px,transparent_1px),linear-gradient(to_bottom,#80808008_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none" />
 
+      {/* Override Chrome/Edge autofill yellow background in stylesheet */}
+      <style>{`
+        input:-webkit-autofill,
+        input:-webkit-autofill:hover, 
+        input:-webkit-autofill:focus, 
+        input:-webkit-autofill:active {
+            -webkit-box-shadow: 0 0 0 30px white inset !important;
+            -webkit-text-fill-color: var(--text-primary) !important;
+        }
+      `}</style>
+
       {/* Login Card Wrapper */}
-      <div className="relative w-full max-w-md bg-white border border-border-color/60 rounded-[2rem] shadow-xl p-8 flex flex-col gap-6 animate-in fade-in duration-300">
+      <div className="relative w-full max-w-md bg-white border border-border-color/60 rounded-[2rem] shadow-xl p-8 flex flex-col gap-6 animate-in fade-in duration-300 my-auto">
         
         {/* 1. Header Brand Logo */}
         <div className="flex items-center gap-3.5 justify-center select-none">
-          <img src={promoImg} className="w-9 h-9 object-contain rounded-xl shadow-xs" alt="AssetFlow Logo" />
+          <svg width="34" height="34" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2L3 7v10l9 5 9-5V7l-9-5z" stroke="#FF5A1F" strokeWidth="2.5" strokeLinejoin="round" />
+            <path d="M12 22V12" stroke="#FF5A1F" strokeWidth="2.5" />
+            <path d="M12 12L3 7" stroke="#FF5A1F" strokeWidth="2.5" />
+            <path d="M12 12l9-5" stroke="#FF5A1F" strokeWidth="2.5" />
+            <circle cx="12" cy="12" r="3" fill="#FF5A1F" />
+          </svg>
           <span className="font-heading text-2xl font-black text-text-primary tracking-tight">
             Asset<span className="text-primary-orange">Flow</span>
           </span>
@@ -113,7 +146,7 @@ export default function LoginPage({ onLogin }) {
         <div className="flex justify-center select-none">
           <div className="w-20 h-20 rounded-full bg-primary-orange-light border border-primary-orange-border/30 flex items-center justify-center shadow-xs">
             <span className="font-heading text-xl font-black text-primary-orange">
-              {isSignUp ? 'AF' : 'AF'}
+              AF
             </span>
           </div>
         </div>
@@ -232,6 +265,44 @@ export default function LoginPage({ onLogin }) {
           </span>
           <div className="border-t border-border-color flex-grow" />
         </div>
+
+        {/* Dev Fast Login Options */}
+        {!isSignUp && (
+          <div className="flex flex-col gap-2.5 animate-in fade-in duration-300">
+            <h4 className="text-[11px] font-extrabold text-text-secondary tracking-wide uppercase text-center mb-1">
+              Dev Fast Login
+            </h4>
+            <div className="flex flex-col gap-2">
+              {DEV_ACCOUNTS.map((acc) => {
+                const styles = ROLE_BADGE_STYLES[acc.role] || ROLE_BADGE_STYLES[ROLES.EMPLOYEE];
+                return (
+                  <button
+                    key={acc.role}
+                    type="button"
+                    onClick={() => handleDevQuickLogin(acc)}
+                    className="flex items-center justify-between p-3 rounded-xl border border-border-color/60 hover:border-primary-orange hover:bg-orange-50/10 transition bg-white shadow-xs cursor-pointer text-left w-full group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${styles.bg} ${styles.text} shrink-0`}>
+                        <ShieldIcon size={15} />
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-xs font-bold text-text-primary">{acc.name}</span>
+                        <span className="text-[10px] text-text-secondary font-semibold">{ROLE_LABELS[acc.role]}</span>
+                      </div>
+                    </div>
+                    <ChevronRightIcon size={14} className="text-text-muted group-hover:text-primary-orange transition-colors" />
+                  </button>
+                );
+              })}
+            </div>
+            
+             <div className="flex items-center justify-center my-1 select-none pt-2">
+               <div className="border-t border-border-color flex-grow" />
+               <div className="border-t border-border-color flex-grow" />
+             </div>
+          </div>
+        )}
 
         {/* 6. Toggle Sign In / Sign Up buttons */}
         <div className="flex flex-col gap-4">
