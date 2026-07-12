@@ -147,9 +147,17 @@ export default function OrgSetupPage() {
       if (!empForm.name || !empForm.head) return alert('Please fill in Name and Manager/Head Name');
       
       const email = `${empForm.name.toLowerCase().replace(/\s+/g, '')}@company.com`;
+      const selectedDept = departments.find(d => d.name === empForm.dept);
+      const departmentId = selectedDept ? selectedDept.id : null;
+
       const { data, error } = await supabase
         .from('employees')
-        .insert([{ name: empForm.name, email, role: 'EMPLOYEE', password_hash: 'default' }])
+        .insert([{ 
+          name: empForm.name, 
+          email, 
+          role: 'EMPLOYEE',
+          department_id: departmentId
+        }])
         .select();
 
       if (error) {

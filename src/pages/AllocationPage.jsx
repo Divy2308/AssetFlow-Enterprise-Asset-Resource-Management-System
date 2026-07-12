@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '../config/supabaseClient';
 import {
   UserIcon,
@@ -12,7 +12,7 @@ import {
   BoxIcon
 } from '../components/Icons';
 
-export default function AllocationPage({ assets, setAssets, employeesList }) {
+export default function AllocationPage({ assets, setAssets }) {
   // 1. Selected Asset State - defaults to AF-0114 (id: 4) if present
   const [selectedAssetId, setSelectedAssetId] = useState(
     assets.some(a => a.id === 4) ? '4' : assets[0]?.id.toString() || ''
@@ -22,7 +22,41 @@ export default function AllocationPage({ assets, setAssets, employeesList }) {
   const [targetEmployee, setTargetEmployee] = useState('');
   const [reason, setReason] = useState('');
 
-  // 3. Allocation History State
+  // 3. Dynamic Employees List loaded from Supabase
+  const [localEmployeesList, setLocalEmployeesList] = useState([]);
+
+  // Fetch employees list live on component mount
+  useEffect(() => {
+    const fetchEmployees = async () => {
+      try {
+        const { data: emps, error: empsError } = await supabase
+          .from('employees')
+          .select('*');
+        
+        const { data: depts, error: deptsError } = await supabase
+          .from('departments')
+          .select('*');
+
+        if (emps && depts) {
+          const deptIdToName = {};
+          depts.forEach(d => {
+            deptIdToName[d.id] = d.name;
+          });
+
+          setLocalEmployeesList(emps.map(e => ({
+            id: e.id,
+            name: e.name,
+            dept: e.department_id ? (deptIdToName[e.department_id] || '—') : '—'
+          })));
+        }
+      } catch (err) {
+        console.error('Error fetching employees for allocations:', err);
+      }
+    };
+    fetchEmployees();
+  }, []);
+
+  // 4. Allocation History State
   const [historyLogs, setHistoryLogs] = useState([
     { id: 1, date: 'Mar 12', details: 'Allocated to Priya Shah - Engineering' },
     { id: 2, date: 'Jan 04', details: 'Returned by Arjun Nair - condition: good' }
@@ -56,7 +90,7 @@ export default function AllocationPage({ assets, setAssets, employeesList }) {
     if (!targetEmployee) return alert('Please select a recipient employee.');
     if (!reason.trim()) return alert('Please enter a transfer reason.');
 
-    const emp = employeesList.find((e) => e.name === targetEmployee);
+    const emp = localEmployeesList.find((e) => e.name === targetEmployee);
     const targetOwnerId = emp ? emp.id : null;
     const targetLocation = emp?.dept === 'Engineering' ? 'Bengaluru' : 'HQ Floor 2';
 
@@ -171,7 +205,7 @@ export default function AllocationPage({ assets, setAssets, employeesList }) {
               </div>
               <div className="flex flex-col gap-0.5">
                 <span className="text-sm font-extrabold text-alert-red-text">
-                  Already Allocated to {currentOwner} ({employeesList.find(e => e.name === currentOwner)?.dept || 'Engineering'})
+                  Already Allocated to {currentOwner} ({localEmployeesList.find(e => e.name === currentOwner)?.dept || 'Engineering'})
                 </span>
                 <span className="text-xs font-semibold text-red-700/80">
                   Direct re-allocation is blocked – submit a transfer request below.
@@ -253,7 +287,7 @@ export default function AllocationPage({ assets, setAssets, employeesList }) {
                   onChange={(e) => setTargetEmployee(e.target.value)}
                 >
                   <option value="">Select Employee...</option>
-                  {employeesList
+                  {localEmployeesList
                     .filter((e) => e.name !== currentOwner)
                     .map((emp, idx) => (
                       <option key={idx} value={emp.name}>

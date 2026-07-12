@@ -377,11 +377,11 @@ export default function ReportsPage() {
                       x={x + barWidth / 2}
                       y="208"
                       textAnchor="middle"
-                      fontSize="11"
+                      fontSize="10"
                       fontWeight="600"
                       fill="var(--text-secondary)"
                     >
-                      {dept.name}
+                      {dept.name === 'Human Resources (HR)' ? 'HR' : dept.name === 'Product & Design' ? 'Product' : dept.name === 'Finance & Admin' ? 'Finance' : dept.name}
                     </text>
                   </g>
                 );
